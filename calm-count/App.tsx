@@ -71,6 +71,7 @@ const countingConfigs = [
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [settings, setSettings] = useState<Settings>({ skipCounting: false, soundEnabled: true, voiceEnabled: true, minimalAnimations: false });
+  const [voiceId, setVoiceId] = useState<string | undefined>(undefined);
   const [chapter, setChapter] = useState<Chapter>('counting');
   const [level, setLevel] = useState(1);
   const [question, setQuestion] = useState<RoundQuestion | null>(null);
@@ -141,10 +142,35 @@ export default function App() {
     },
   }), [draggingNumber, question]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const voices = await Speech.getAvailableVoicesAsync();
+        if (!voices?.length) return;
+        const scored = voices
+          .map((v: any) => {
+            const name = String(v.name ?? '').toLowerCase();
+            const lang = String(v.language ?? '').toLowerCase();
+            let score = 0;
+            if (lang.startsWith('en-us')) score += 5;
+            if (lang.startsWith('en-')) score += 3;
+            if (name.includes('natural') || name.includes('neural') || name.includes('enhanced')) score += 5;
+            if (name.includes('samantha') || name.includes('alex') || name.includes('daniel') || name.includes('zira') || name.includes('aria')) score += 3;
+            if (name.includes('google')) score += 2;
+            return { id: v.identifier as string, score };
+          })
+          .sort((a, b) => b.score - a.score);
+        if (scored[0]?.id) setVoiceId(scored[0].id);
+      } catch {
+        // keep platform default voice
+      }
+    })();
+  }, []);
+
   function speakLine(line: string) {
     if (!settings.voiceEnabled) return;
     Speech.stop();
-    Speech.speak(line, { rate: 0.88, pitch: 1.05 });
+    Speech.speak(line, { rate: 0.95, pitch: 1.0, voice: voiceId });
   }
 
   function playTone(kind: 'success' | 'error', force = false) {
@@ -386,6 +412,7 @@ export default function App() {
             <SettingRow label="Child knows counting (Skip chapter)" value={settings.skipCounting} onChange={(v) => setSettings((s) => ({ ...s, skipCounting: v }))} />
             <SettingRow label="Sound" value={settings.soundEnabled} onChange={(v) => setSettings((s) => ({ ...s, soundEnabled: v }))} />
             <SettingRow label="Voice prompts" value={settings.voiceEnabled} onChange={(v) => setSettings((s) => ({ ...s, voiceEnabled: v }))} />
+            {!!voiceId && <Text style={[styles.statsLine, { width: '100%', maxWidth: 780 }]}>Voice: {voiceId}</Text>}
             <SettingRow label="Minimal animations" value={settings.minimalAnimations} onChange={(v) => setSettings((s) => ({ ...s, minimalAnimations: v }))} />
 
             <View style={styles.statsCard}>
