@@ -274,8 +274,6 @@ export default function App() {
     if (screen === 'chapterIntro') {
       return chapter === 'counting'
         ? 'Counting chapter. Drag the correct number card into the drop zone.'
-        : level <= 5
-        ? 'Addition chapter. Tap the picture group that matches the answer.'
         : 'Addition chapter. Drag the correct number card into the drop zone.';
     }
     if (screen === 'question' && question) {
@@ -292,7 +290,7 @@ export default function App() {
     if (screen === 'home') played = playVoiceClip(VOICE_CLIPS.home);
     else if (screen === 'parent') played = playVoiceClip(VOICE_CLIPS.parent);
     else if (screen === 'chapterIntro') {
-      played = playVoiceClip(chapter === 'counting' ? VOICE_CLIPS.counting : (level <= 5 ? VOICE_CLIPS.additionImage : VOICE_CLIPS.additionDrag));
+      played = playVoiceClip(chapter === 'counting' ? VOICE_CLIPS.counting : VOICE_CLIPS.additionDrag);
     } else if (screen === 'question' && question) {
       if (question.mode === 'counting') played = playVoiceClip(VOICE_CLIPS.counting);
       else if (question.mode === 'addition-image-choice') played = playVoiceClip(VOICE_CLIPS.additionImage);
@@ -522,9 +520,7 @@ export default function App() {
             <Text style={styles.subtitle}>
               {chapter === 'counting'
                 ? 'Drag the right number card into the square.'
-                : level <= 5
-                ? 'Pick the correct apple group.'
-                : 'Now we answer with numbers. You can do it!'}
+                : 'Drag the right number card into the square.'}
             </Text>
             <PrimaryButton title={`Start Level ${level}`} icon="rocket-launch-outline" onPress={() => setScreen('question')} />
           </>
@@ -753,12 +749,7 @@ function buildQuestion(chapter: Chapter, level: number): RoundQuestion {
     const answer = randInt(cfg.min, cfg.max);
     return { promptA: answer, answer, options: numberOptions(answer, cfg.optionCount, cfg.min, cfg.max), mode: 'counting' };
   }
-  if (level <= 5) {
-    const max = Math.min(7, level + 2);
-    const a = randInt(1, max - 1); const b = randInt(1, max - a); const answer = a + b;
-    return { promptA: a, promptB: b, answer, options: numberOptions(answer, Math.min(3, level + 1), 1, 10), mode: 'addition-image-choice' };
-  }
-  const max = Math.min(10, level);
+  const max = Math.min(10, Math.max(4, level + 1));
   const a = randInt(1, max - 1); const b = randInt(1, max - a); const answer = a + b;
   return { promptA: a, promptB: b, answer, options: numberOptions(answer, level < 10 ? 3 : 4, 1, 10), mode: 'addition-drag-number' };
 }
