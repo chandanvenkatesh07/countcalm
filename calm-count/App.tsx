@@ -147,8 +147,8 @@ export default function App() {
     Speech.speak(line, { rate: 0.88, pitch: 1.05 });
   }
 
-  function playTone(kind: 'success' | 'error') {
-    if (!settings.soundEnabled) return;
+  function playTone(kind: 'success' | 'error', force = false) {
+    if (!force && !settings.soundEnabled) return;
     if (Platform.OS !== 'web') return;
     try {
       const AudioCtx = (globalThis as any).AudioContext || (globalThis as any).webkitAudioContext;
@@ -166,14 +166,38 @@ export default function App() {
       gain.connect(ctx.destination);
 
       const now = ctx.currentTime;
-      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'success' ? 0.28 : 0.34));
+      gain.gain.exponentialRampToValueAtTime(0.32, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'success' ? 0.36 : 0.42));
 
       osc.start(now);
-      osc.stop(now + (kind === 'success' ? 0.3 : 0.36));
+      osc.stop(now + (kind === 'success' ? 0.38 : 0.44));
     } catch {
       // no-op if browser blocks audio context
     }
+  }
+
+  function getInstructionLine() {
+    if (screen === 'home') return 'Welcome to Calm Count. Tap Start Learning. Hold Parent Zone to open settings.';
+    if (screen === 'parent') return 'Parent Zone. Toggle settings and use Test Chime to confirm sound.';
+    if (screen === 'chapterIntro') {
+      return chapter === 'counting'
+        ? 'Counting chapter. Drag the correct number card into the drop zone.'
+        : level <= 5
+        ? 'Addition chapter. Tap the picture group that matches the answer.'
+        : 'Addition chapter. Drag the correct number card into the drop zone.';
+    }
+    if (screen === 'question' && question) {
+      if (question.mode === 'counting') return 'Count the objects and drag the matching number card into the drop zone.';
+      if (question.mode === 'addition-image-choice') return 'Add both groups, then tap the correct picture option.';
+      return 'Add both groups and drag the correct number card into the drop zone.';
+    }
+    return 'Let’s keep learning.';
+  }
+
+  function repeatInstructions() {
+    const line = getInstructionLine();
+    speakLine(line);
+    if (screen === 'question') setFeedback(line);
   }
 
   function startLearning() {
@@ -327,6 +351,16 @@ export default function App() {
     <SafeAreaView style={styles.root}>
       <StatusBar style="dark" />
       <Animated.View style={[styles.screen, { opacity: screenFade }]}>
+        <View style={styles.soundToolsRow}>
+          <Pressable style={styles.miniBtn} onPress={repeatInstructions}>
+            <MaterialCommunityIcons name="bullhorn-outline" size={18} color="#12404A" />
+            <Text style={styles.miniBtnText}>Repeat instructions</Text>
+          </Pressable>
+          <Pressable style={styles.miniBtn} onPress={() => playTone('success', true)}>
+            <MaterialCommunityIcons name="music-note" size={18} color="#12404A" />
+            <Text style={styles.miniBtnText}>Test chime</Text>
+          </Pressable>
+        </View>
         {showIntro && (
           <View style={styles.introOverlay}>
             <Text style={styles.introTitle}>Welcome to Calm Count</Text>
@@ -617,6 +651,9 @@ const styles = StyleSheet.create({
   introOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(247,245,239,0.96)', zIndex: 50, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 },
   introTitle: { fontSize: 42, fontWeight: '900', color: tokens.text, textAlign: 'center' },
   introText: { fontSize: 20, color: tokens.subtle, textAlign: 'center', maxWidth: 760, lineHeight: 30 },
+  soundToolsRow: { width: '100%', maxWidth: 920, flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' },
+  miniBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D8EEF4', borderWidth: 1, borderColor: '#AED5DE', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  miniBtnText: { color: '#12404A', fontWeight: '700' },
   title: { fontSize: 44, fontWeight: '800', color: tokens.text, textAlign: 'center' },
   subtitle: { fontSize: 20, color: tokens.subtle, textAlign: 'center', maxWidth: 760, lineHeight: 29 },
   primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: tokens.accent, borderColor: '#A8D8DA', borderWidth: 1, minWidth: 260, paddingVertical: 16, paddingHorizontal: 22, borderRadius: 20 },
