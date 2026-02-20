@@ -29,6 +29,8 @@ type RoundQuestion = {
   mode: 'counting' | 'addition-image-choice' | 'addition-drag-number';
 };
 
+const TILE_SIZE = 180;
+
 const pastel = {
   bg: '#F7F4EC',
   panel: '#FFFFFF',
@@ -253,18 +255,21 @@ export default function App() {
           ) : (
             <View style={styles.optionRow}>
               {question.options.map((opt) => (
-                <Pressable
+                <Animated.View
                   key={opt}
-                  style={styles.numberCard}
-                  onPressIn={() => setDraggingNumber(opt)}
+                  style={[styles.numberCard, draggingNumber === opt ? dragPos.getLayout() : undefined]}
+                  {...(draggingNumber === opt ? panResponder.panHandlers : {})}
                 >
-                  <Animated.View
-                    {...(draggingNumber === opt ? panResponder.panHandlers : {})}
-                    style={draggingNumber === opt ? dragPos.getLayout() : undefined}
+                  <Pressable
+                    style={styles.fullCardPress}
+                    onPressIn={() => {
+                      setDraggingNumber(opt);
+                      dragPos.setValue({ x: 0, y: 0 });
+                    }}
                   >
                     <Text style={styles.numberText}>{opt}</Text>
-                  </Animated.View>
-                </Pressable>
+                  </Pressable>
+                </Animated.View>
               ))}
             </View>
           )}
@@ -407,8 +412,8 @@ const styles = StyleSheet.create({
   },
   promptText: { fontSize: 54, textAlign: 'center' },
   dropZone: {
-    width: 520,
-    height: 140,
+    width: TILE_SIZE,
+    height: TILE_SIZE,
     borderRadius: 24,
     borderWidth: 2,
     borderColor: '#AFDAE1',
@@ -416,7 +421,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dropText: { fontSize: 44, color: pastel.text, fontWeight: '600' },
+  dropText: { fontSize: 26, color: pastel.text, fontWeight: '600', textAlign: 'center', paddingHorizontal: 12 },
   optionRow: {
     flexDirection: 'row',
     gap: 16,
@@ -437,8 +442,8 @@ const styles = StyleSheet.create({
   },
   optionApple: { fontSize: 42 },
   numberCard: {
-    width: 240,
-    height: 140,
+    width: TILE_SIZE,
+    height: TILE_SIZE,
     borderRadius: 24,
     backgroundColor: '#F8D8C9',
     borderWidth: 2,
@@ -446,6 +451,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  fullCardPress: { flex: 1, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   numberText: { fontSize: 72, fontWeight: '700', color: pastel.text },
   feedback: { fontSize: 22, color: '#2A6656', textAlign: 'center', minHeight: 30 },
   stars: { fontSize: 24, color: '#B58400', fontWeight: '700' },
