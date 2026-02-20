@@ -89,6 +89,7 @@ export default function App() {
   const cardLift = useRef(new Animated.Value(1)).current;
   const screenFade = useRef(new Animated.Value(0)).current;
   const revealScale = useRef(new Animated.Value(0.6)).current;
+  const webAudioCtxRef = useRef<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -152,20 +153,24 @@ export default function App() {
     try {
       const AudioCtx = (globalThis as any).AudioContext || (globalThis as any).webkitAudioContext;
       if (!AudioCtx) return;
-      const ctx = new AudioCtx();
+      if (!webAudioCtxRef.current) webAudioCtxRef.current = new AudioCtx();
+      if (webAudioCtxRef.current.state === 'suspended') void webAudioCtxRef.current.resume();
+
+      const ctx = webAudioCtxRef.current;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = kind === 'success' ? 880 : 220;
+      osc.type = kind === 'success' ? 'triangle' : 'square';
+      osc.frequency.value = kind === 'success' ? 980 : 180;
       gain.gain.value = 0.0001;
       osc.connect(gain);
       gain.connect(ctx.destination);
+
       const now = ctx.currentTime;
-      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'success' ? 0.18 : 0.24));
+      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'success' ? 0.28 : 0.34));
+
       osc.start(now);
-      osc.stop(now + (kind === 'success' ? 0.2 : 0.26));
-      setTimeout(() => ctx.close(), 300);
+      osc.stop(now + (kind === 'success' ? 0.3 : 0.36));
     } catch {
       // no-op if browser blocks audio context
     }
