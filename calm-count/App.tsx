@@ -35,10 +35,12 @@ type RoundQuestion = {
 };
 
 type LevelStat = { plays: number; clears: number; firstTryClears: number };
+type DayStat = { played: number; firstTryWins: number; clears: number };
 type ProgressStats = {
   gamesPlayed: number;
   firstTryWins: number;
   levelStats: Record<string, LevelStat>;
+  daily: Record<string, DayStat>;
 };
 
 const TILE_SIZE = 184;
@@ -69,7 +71,7 @@ export default function App() {
   const [draggingNumber, setDraggingNumber] = useState<number | null>(null);
   const [firstAttemptMissed, setFirstAttemptMissed] = useState(false);
   const [consecutiveFirstAttemptFails, setConsecutiveFirstAttemptFails] = useState(0);
-  const [stats, setStats] = useState<ProgressStats>({ gamesPlayed: 0, firstTryWins: 0, levelStats: {} });
+  const [stats, setStats] = useState<ProgressStats>({ gamesPlayed: 0, firstTryWins: 0, levelStats: {}, daily: {} });
 
   const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const cardLift = useRef(new Animated.Value(1)).current;
@@ -78,7 +80,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      if (raw) setStats(JSON.parse(raw));
+      if (raw) { const parsed = JSON.parse(raw); setStats({ gamesPlayed: parsed.gamesPlayed ?? 0, firstTryWins: parsed.firstTryWins ?? 0, levelStats: parsed.levelStats ?? {}, daily: parsed.daily ?? {} }); }
     })();
   }, []);
 
@@ -135,8 +137,10 @@ export default function App() {
 
   function updateStats(clearedOnFirstTry: boolean) {
     const key = levelKey(chapter, level);
+    const today = new Date().toISOString().slice(0, 10);
     setStats((s) => {
       const prev = s.levelStats[key] ?? { plays: 0, clears: 0, firstTryClears: 0 };
+      const dayPrev = s.daily[today] ?? { played: 0, firstTryWins: 0, clears: 0 };
       return {
         gamesPlayed: s.gamesPlayed + 1,
         firstTryWins: s.firstTryWins + (clearedOnFirstTry ? 1 : 0),
@@ -146,6 +150,14 @@ export default function App() {
             plays: prev.plays + 1,
             clears: prev.clears + 1,
             firstTryClears: prev.firstTryClears + (clearedOnFirstTry ? 1 : 0),
+          },
+        },
+        daily: {
+          ...s.daily,
+          [today]: {
+            played: dayPrev.played + 1,
+            clears: dayPrev.clears + 1,
+            firstTryWins: dayPrev.firstTryWins + (clearedOnFirstTry ? 1 : 0),
           },
         },
       };
@@ -227,7 +239,7 @@ export default function App() {
   }
 
   async function resetProgress() {
-    const blank = { gamesPlayed: 0, firstTryWins: 0, levelStats: {} };
+    const blank = { gamesPlayed: 0, firstTryWins: 0, levelStats: {}, daily: {} };
     setStats(blank);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(blank));
     setFeedback('Progress reset done.');
@@ -266,6 +278,8 @@ export default function App() {
               <Text style={styles.statsLine}>Current chapter/level: {chapter} {level}</Text>
               <Text style={[styles.statsLine, { marginTop: 8, fontWeight: '800' }]}>Level consistency graph</Text>
               {renderLevelGraph(stats.levelStats)}
+              <Text style={[styles.statsLine, { marginTop: 10, fontWeight: '800' }]}>Last 7 days trend</Text>
+              {renderDailyGraph(stats.daily)}
             </View>
 
             <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -370,6 +384,34 @@ function renderLevelGraph(levelStats: Record<string, LevelStat>) {
           </View>
         );
       })}
+    </View>
+  );
+}
+
+function renderDailyGraph(daily: Record<string, DayStat>) {
+  const out: { day: string; played: number; rate: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const label = `${d.getMonth() + 1}/${d.getDate()}`;
+    const v = daily[key] ?? { played: 0, firstTryWins: 0, clears: 0 };
+    const rate = v.played ? Math.round((v.firstTryWins / v.played) * 100) : 0;
+    out.push({ day: label, played: v.played, rate });
+  }
+
+  return (
+    <View style={{ width: '100%', marginTop: 4, gap: 6 }}>
+      {out.map((d) => (
+        <View key={d.day} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ width: 44, color: tokens.text, fontWeight: '700' }}>{d.day}</Text>
+          <View style={{ flex: 1, height: 12, backgroundColor: '#E9F1F4', borderRadius: 999 }}>
+            <View style={{ width: `${d.rate}%`, height: 12, backgroundColor: '#8CAEEA', borderRadius: 999 }} />
+          </View>
+          <Text style={{ width: 72, textAlign: 'right', color: tokens.subtle }}>{d.played} plays</Text>
+          <Text style={{ width: 44, textAlign: 'right', color: tokens.subtle }}>{d.rate}%</Text>
+        </View>
+      ))}
     </View>
   );
 }
