@@ -39,6 +39,8 @@ type RoundQuestion = {
   mode: 'counting' | 'addition-image-choice' | 'addition-drag-number';
 };
 
+type Rect = { x: number; y: number; width: number; height: number };
+
 type LevelStat = { plays: number; clears: number; firstTryClears: number };
 type DayStat = { played: number; firstTryWins: number; clears: number };
 type ProgressStats = {
@@ -97,12 +99,15 @@ export default function App() {
   const [sparkle, setSparkle] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [confettiKey, setConfettiKey] = useState(0);
+  const [optionFlash, setOptionFlash] = useState<{ value: number; status: 'wrong' | 'correct' } | null>(null);
+  const [dropZoneRect, setDropZoneRect] = useState<Rect | null>(null);
 
   const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const cardLift = useRef(new Animated.Value(1)).current;
   const screenFade = useRef(new Animated.Value(0)).current;
   const revealScale = useRef(new Animated.Value(0.6)).current;
   const webAudioCtxRef = useRef<any>(null);
+  const dropZoneRef = useRef<View | null>(null);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const isTabletLandscape = isLandscape && width >= 1000;
@@ -136,11 +141,21 @@ export default function App() {
       dragPos.setValue({ x: 0, y: 0 });
       setFeedback('You can do it!');
       setRevealedAnswer(null);
+      setOptionFlash(null);
       revealScale.setValue(0.6);
+      setTimeout(() => {
+        dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+          setDropZoneRect({ x, y, width, height });
+        });
+      }, 40);
     }
   }, [screen, chapter, level, dragPos]);
 
   const shouldUseDrag = question?.mode === 'counting' || question?.mode === 'addition-drag-number';
+
+  function overlaps(a: Rect, b: Rect) {
+    return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+  }
 
   const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -148,14 +163,27 @@ export default function App() {
     onPanResponderMove: (_, g) => dragPos.setValue({ x: g.dx, y: g.dy }),
     onPanResponderRelease: (_, g) => {
       if (!question || draggingNumber == null) return;
-      const droppedInZone = g.dy < -90;
-      if (droppedInZone && draggingNumber === question.answer) {
+
+      const cardRect: Rect = {
+        x: g.moveX - TILE_SIZE / 2,
+        y: g.moveY - TILE_SIZE / 2,
+        width: TILE_SIZE,
+        height: TILE_SIZE,
+      };
+
+      const touchingDropZone = !!dropZoneRect && overlaps(cardRect, dropZoneRect);
+
+      if (touchingDropZone && draggingNumber === question.answer) {
+        setOptionFlash({ value: draggingNumber, status: 'correct' });
+        setTimeout(() => setOptionFlash(null), 700);
         handleLevelSuccess();
       } else {
+        setOptionFlash({ value: draggingNumber, status: 'wrong' });
+        setTimeout(() => setOptionFlash(null), 420);
         handleWrongAttempt();
       }
     },
-  }), [draggingNumber, question]);
+  }), [draggingNumber, question, dropZoneRect]);
 
   useEffect(() => {
     (async () => {
@@ -533,7 +561,15 @@ export default function App() {
 
                 {shouldUseDrag && (
                   <>
-                    <View style={styles.dropZone}>
+                    <View
+                      ref={(r) => { dropZoneRef.current = r; }}
+                      onLayout={() => {
+                        dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                          setDropZoneRect({ x, y, width, height });
+                        });
+                      }}
+                      style={styles.dropZone}
+                    >
                       <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
                       <Text style={styles.dropText}>Drop answer here</Text>
                     </View>
@@ -554,21 +590,30 @@ export default function App() {
                   </View>
                 ) : (
                   <View style={styles.optionRow}>
-                    {question.options.map((opt, idx) => (
-                      <Animated.View
-                        key={opt}
-                        style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
-                        {...(draggingNumber === opt ? panResponder.panHandlers : {})}
-                      >
-                        <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
-                          <LinearGradient colors={bagColors(idx)} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
-                            <View style={styles.bagKnot} />
-                            <View style={styles.numberInnerGlow} />
-                            <Text style={styles.numberText}>{opt}</Text>
-                          </LinearGradient>
-                        </Pressable>
-                      </Animated.View>
-                    ))}
+                    {question.options.map((opt, idx) => {
+                      const flash = optionFlash?.value === opt ? optionFlash.status : null;
+                      const cardColors = flash === 'wrong'
+                        ? (['#FFDADB', '#FFA7AB', '#FF7C82'] as [string, string, string])
+                        : flash === 'correct'
+                        ? (['#DDF8E1', '#ACEBB7', '#79DB8B'] as [string, string, string])
+                        : bagColors(idx);
+
+                      return (
+                        <Animated.View
+                          key={opt}
+                          style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
+                          {...(draggingNumber === opt ? panResponder.panHandlers : {})}
+                        >
+                          <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
+                            <LinearGradient colors={cardColors} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
+                              <View style={styles.bagKnot} />
+                              <View style={styles.numberInnerGlow} />
+                              <Text style={styles.numberText}>{opt}</Text>
+                            </LinearGradient>
+                          </Pressable>
+                        </Animated.View>
+                      );
+                    })}
                   </View>
                 )}
 
