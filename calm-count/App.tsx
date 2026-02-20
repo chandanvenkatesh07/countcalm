@@ -453,16 +453,18 @@ export default function App() {
     <SafeAreaView style={styles.root}>
       <StatusBar style="dark" />
       <Animated.View style={[styles.screen, isTabletLandscape && styles.screenWide, { opacity: screenFade }]}>
-        <View style={styles.soundToolsRow}>
-          <Pressable style={styles.miniBtn} onPress={repeatInstructions}>
-            <MaterialCommunityIcons name="bullhorn-outline" size={18} color="#12404A" />
-            <Text style={styles.miniBtnText}>Repeat instructions</Text>
-          </Pressable>
-          <Pressable style={styles.miniBtn} onPress={() => { playTone('success', true); if (!playVoiceClip(VOICE_CLIPS.testVoice)) speakLine('Test chime and voice are working.'); }}>
-            <MaterialCommunityIcons name="music-note" size={18} color="#12404A" />
-            <Text style={styles.miniBtnText}>Test chime</Text>
-          </Pressable>
-        </View>
+        {screen !== 'question' && (
+          <View style={styles.soundToolsRow}>
+            <Pressable style={styles.miniBtn} onPress={repeatInstructions}>
+              <MaterialCommunityIcons name="bullhorn-outline" size={18} color="#12404A" />
+              <Text style={styles.miniBtnText}>Repeat instructions</Text>
+            </Pressable>
+            <Pressable style={styles.miniBtn} onPress={() => { playTone('success', true); if (!playVoiceClip(VOICE_CLIPS.testVoice)) speakLine('Test chime and voice are working.'); }}>
+              <MaterialCommunityIcons name="music-note" size={18} color="#12404A" />
+              <Text style={styles.miniBtnText}>Test chime</Text>
+            </Pressable>
+          </View>
+        )}
         {showIntro && (
           <View style={styles.introOverlay}>
             <Text style={styles.introTitle}>Welcome to Calm Count</Text>
@@ -580,7 +582,7 @@ export default function App() {
                       <MaterialCommunityIcons name="tray-arrow-down" size={32} color={tokens.subtle} />
                     ) : (
                       <LinearGradient
-                        colors={bagColors(Math.max(0, question.options.indexOf(snappedValue)))}
+                        colors={['#DDF8E1', '#ACEBB7', '#79DB8B']}
                         start={{ x: 0.1, y: 0.1 }}
                         end={{ x: 0.9, y: 1 }}
                         style={styles.snapCard}
@@ -634,10 +636,7 @@ export default function App() {
                 </View>
               )}
 
-              <Pressable style={styles.repeatInlineBtn} onPress={repeatInstructions}>
-                <MaterialCommunityIcons name="bullhorn-outline" size={18} color="#12404A" />
-                <Text style={styles.repeatInlineBtnText}>Repeat instructions</Text>
-              </Pressable>
+              {/* inline repeat removed */}
 
               <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ 🎉 ✨</Text>}</View>
             </View>
