@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type Screen = 'home' | 'parent' | 'chapterIntro' | 'question';
 type Chapter = 'counting' | 'addition';
@@ -72,6 +73,8 @@ export default function App() {
   const [firstAttemptMissed, setFirstAttemptMissed] = useState(false);
   const [consecutiveFirstAttemptFails, setConsecutiveFirstAttemptFails] = useState(0);
   const [stats, setStats] = useState<ProgressStats>({ gamesPlayed: 0, firstTryWins: 0, levelStats: {}, daily: {} });
+  const [revealedAnswer, setRevealedAnswer] = useState<number | null>(null);
+  const [sparkle, setSparkle] = useState(false);
 
   const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const cardLift = useRef(new Animated.Value(1)).current;
@@ -105,6 +108,7 @@ export default function App() {
       setFirstAttemptMissed(false);
       dragPos.setValue({ x: 0, y: 0 });
       setFeedback('You can do it!');
+      setRevealedAnswer(null);
     }
   }, [screen, chapter, level, dragPos]);
 
@@ -204,6 +208,9 @@ export default function App() {
   function handleLevelSuccess() {
     if (!question) return;
     const firstTry = !firstAttemptMissed;
+    if (question.mode === 'addition-image-choice') setRevealedAnswer(question.answer);
+    setSparkle(true);
+    setTimeout(() => setSparkle(false), 700);
     setFeedback(
       chapter === 'counting'
         ? `Yes! ${question.answer} apples. Great job!`
@@ -214,7 +221,7 @@ export default function App() {
       Animated.spring(cardLift, { toValue: 1.08, useNativeDriver: true, bounciness: 8 }),
       Animated.spring(cardLift, { toValue: 1, useNativeDriver: true, bounciness: 6 }),
     ]).start();
-    setTimeout(() => advanceAfterSuccess(firstTry), 850);
+    setTimeout(() => advanceAfterSuccess(firstTry), 1050);
   }
 
   function handleWrongAttempt() {
@@ -325,6 +332,15 @@ export default function App() {
               )}
             </View>
 
+            {question.mode === 'addition-image-choice' && revealedAnswer !== null && (
+              <View style={styles.answerRevealWrap}>
+                <Text style={styles.answerRevealText}>Great! That is</Text>
+                <LinearGradient colors={['#BFE8FF', '#8FD2FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.answerRevealBadge}>
+                  <Text style={styles.answerRevealNumber}>{revealedAnswer}</Text>
+                </LinearGradient>
+              </View>
+            )}
+
             {shouldUseDrag && (
               <View style={styles.dropZone}>
                 <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
@@ -343,18 +359,21 @@ export default function App() {
                 {question.options.map((opt) => (
                   <Animated.View
                     key={opt}
-                    style={[styles.numberCard, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
+                    style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
                     {...(draggingNumber === opt ? panResponder.panHandlers : {})}
                   >
                     <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
-                      <Text style={styles.numberText}>{opt}</Text>
+                      <LinearGradient colors={['#FFF6D9', '#FFD9B8', '#FFC69D']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
+                        <View style={styles.numberInnerGlow} />
+                        <Text style={styles.numberText}>{opt}</Text>
+                      </LinearGradient>
                     </Pressable>
                   </Animated.View>
                 ))}
               </View>
             )}
 
-            <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text></View>
+            <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ ✨</Text>}</View>
           </>
         )}
       </Animated.View>
@@ -492,9 +511,16 @@ const styles = StyleSheet.create({
   dropText: { fontSize: 20, color: tokens.subtle, fontWeight: '700', textAlign: 'center', paddingHorizontal: 10 },
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
   imageOption: { minWidth: 236, minHeight: 188, borderRadius: 22, backgroundColor: '#FDFEFE', borderWidth: 1, borderColor: tokens.border, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 },
-  numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, backgroundColor: tokens.warning, borderWidth: 1, borderColor: '#E7BFA2', justifyContent: 'center', alignItems: 'center' },
+  numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#A97442', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
+  numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 1, borderColor: '#E7BFA2', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  numberInnerGlow: { position: 'absolute', top: 10, left: 12, right: 12, height: 26, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.45)' },
   fullCardPress: { flex: 1, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  numberText: { fontSize: 74, fontWeight: '800', color: tokens.text },
+  numberText: { fontSize: 78, fontWeight: '900', color: '#264A5A', textShadowColor: 'rgba(255,255,255,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   feedbackPill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EEF7FA', borderWidth: 1, borderColor: '#D2E8EF', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: 920 },
   feedback: { fontSize: 20, color: '#2A6656', textAlign: 'center' },
+  sparkles: { fontSize: 20, marginLeft: 6 },
+  answerRevealWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: -4, marginBottom: 4 },
+  answerRevealText: { fontSize: 24, fontWeight: '700', color: tokens.text },
+  answerRevealBadge: { width: 72, height: 72, borderRadius: 36, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#7EC0E7' },
+  answerRevealNumber: { fontSize: 40, fontWeight: '900', color: '#154A66' },
 });
