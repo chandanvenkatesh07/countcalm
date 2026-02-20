@@ -1,0 +1,15 @@
+# OpenClaw workspace/meta files (keep out of game repo)
+.openclaw/
+.clawhub/
+AGENTS.md
+BOOTSTRAP.md
+HEARTBEAT.md
+IDENTITY.md
+MEMORY.md
+SOUL.md
+TOOLS.md
+USER.md
+memory/
+reports/
+scripts/
+skills/
