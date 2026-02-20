@@ -16,6 +16,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 
 type Screen = 'home' | 'parent' | 'chapterIntro' | 'question';
 type Chapter = 'counting' | 'addition';
@@ -46,6 +47,10 @@ type ProgressStats = {
 
 const TILE_SIZE = 184;
 const APPLE_3D = require('./assets/objects/apple3d.png');
+const STAR_3D = require('./assets/objects/star3d.png');
+const BALL_3D = require('./assets/objects/ball3d.png');
+const BLOCK_3D = require('./assets/objects/block3d.png');
+const BANANA_3D = require('./assets/objects/banana3d.png');
 const STORAGE_KEY = 'calm_count_stats_v1';
 
 const tokens = {
@@ -75,6 +80,7 @@ export default function App() {
   const [stats, setStats] = useState<ProgressStats>({ gamesPlayed: 0, firstTryWins: 0, levelStats: {}, daily: {} });
   const [revealedAnswer, setRevealedAnswer] = useState<number | null>(null);
   const [sparkle, setSparkle] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const cardLift = useRef(new Animated.Value(1)).current;
@@ -209,6 +215,7 @@ export default function App() {
     if (!question) return;
     const firstTry = !firstAttemptMissed;
     if (question.mode === 'addition-image-choice') setRevealedAnswer(question.answer);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSparkle(true);
     setTimeout(() => setSparkle(false), 700);
     setFeedback(
@@ -226,6 +233,7 @@ export default function App() {
 
   function handleWrongAttempt() {
     if (!firstAttemptMissed) setFirstAttemptMissed(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     setFeedback('Nice try. Let’s try again.');
     Animated.parallel([
       Animated.spring(dragPos, { toValue: { x: 0, y: 0 }, useNativeDriver: false, bounciness: 14 }),
@@ -254,10 +262,21 @@ export default function App() {
 
   const firstTryRate = stats.gamesPlayed ? Math.round((stats.firstTryWins / stats.gamesPlayed) * 100) : 0;
 
+  const objectTheme = getObjectTheme(chapter, level);
+
+  const masteryLabels = getMasteryLabels(stats.levelStats);
+
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar style="dark" />
-      <Animated.View style={[styles.screen, { opacity: screenFade }]}> 
+      <Animated.View style={[styles.screen, { opacity: screenFade }]}>
+        {showIntro && (
+          <View style={styles.introOverlay}>
+            <Text style={styles.introTitle}>Welcome to Calm Count</Text>
+            <Text style={styles.introText}>Tap, drag, and learn with beautiful 3D objects. Parent zone has progress insights.</Text>
+            <PrimaryButton title="Let’s Begin" icon="party-popper" onPress={() => setShowIntro(false)} />
+          </View>
+        )}
         {screen === 'home' && (
           <>
             <Text style={styles.title}>Calm Count</Text>
@@ -287,6 +306,8 @@ export default function App() {
               {renderLevelGraph(stats.levelStats)}
               <Text style={[styles.statsLine, { marginTop: 10, fontWeight: '800' }]}>Last 7 days trend</Text>
               {renderDailyGraph(stats.daily)}
+              <Text style={[styles.statsLine, { marginTop: 10, fontWeight: '800' }]}>Mastery badges</Text>
+              <Text style={styles.statsLine}>{masteryLabels.join(' • ') || 'Play more to unlock badges'}</Text>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -322,12 +343,12 @@ export default function App() {
 
             <View style={styles.promptBox}>
               {question.mode === 'counting' ? (
-                renderAppleRows(question.answer)
+                renderObjectRows(question.answer, objectTheme.asset)
               ) : (
                 <View style={styles.additionPromptRow}>
-                  {renderAppleRows(question.promptA, 4)}
+                  {renderObjectRows(question.promptA, objectTheme.asset, 4)}
                   <Text style={styles.plusSign}>+</Text>
-                  {renderAppleRows(question.promptB ?? 0, 4)}
+                  {renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4)}
                 </View>
               )}
             </View>
@@ -351,7 +372,7 @@ export default function App() {
             {question.mode === 'addition-image-choice' ? (
               <View style={styles.optionRow}>
                 {question.options.map((opt) => (
-                  <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>{renderAppleRows(opt, 4)}</Pressable>
+                  <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>{renderObjectRows(opt, objectTheme.asset, 4)}</Pressable>
                 ))}
               </View>
             ) : (
@@ -373,7 +394,7 @@ export default function App() {
               </View>
             )}
 
-            <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ ✨</Text>}</View>
+            <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ 🎉 ✨</Text>}</View>
           </>
         )}
       </Animated.View>
@@ -467,23 +488,51 @@ function numberOptions(answer: number, count: number, min: number, max: number) 
 
 function randInt(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-function renderAppleRows(count: number, perRow = 5) {
+function renderObjectRows(count: number, asset: any, perRow = 5) {
   const rows: number[] = [];
   for (let i = 0; i < count; i += perRow) rows.push(Math.min(perRow, count - i));
   return (
     <View style={styles.appleRows}>
       {rows.map((n, idx) => (
         <View key={`${count}-${idx}`} style={styles.appleRow}>
-          {Array.from({ length: n }).map((_, j) => <Image key={j} source={APPLE_3D} style={styles.appleIcon3d} resizeMode="contain" />)}
+          {Array.from({ length: n }).map((_, j) => <Image key={j} source={asset} style={styles.appleIcon3d} resizeMode="contain" />)}
         </View>
       ))}
     </View>
   );
 }
 
+
+function getObjectTheme(chapter: Chapter, level: number) {
+  const themes = [
+    { name: 'Apple', asset: APPLE_3D },
+    { name: 'Star', asset: STAR_3D },
+    { name: 'Ball', asset: BALL_3D },
+    { name: 'Block', asset: BLOCK_3D },
+    { name: 'Banana', asset: BANANA_3D },
+  ];
+  const idx = chapter === 'counting' ? (level - 1) % themes.length : (level + 1) % themes.length;
+  return themes[idx];
+}
+
+function getMasteryLabels(levelStats: Record<string, LevelStat>) {
+  const labels: string[] = [];
+  const entries = Object.entries(levelStats);
+  const strong = entries.filter(([,v]) => v.plays >= 3 && (v.firstTryClears / v.plays) >= 0.8).length;
+  if (strong >= 3) labels.push('Consistency Star');
+  const countingStrong = entries.filter(([k,v]) => k.startsWith('C') && v.plays >= 3 && (v.firstTryClears / v.plays) >= 0.75).length;
+  if (countingStrong >= 2) labels.push('Counting Master');
+  const addStrong = entries.filter(([k,v]) => k.startsWith('A') && v.plays >= 3 && (v.firstTryClears / v.plays) >= 0.75).length;
+  if (addStrong >= 3) labels.push('Addition Pro');
+  return labels;
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: tokens.bg },
   screen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 },
+  introOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(247,245,239,0.96)', zIndex: 50, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 },
+  introTitle: { fontSize: 42, fontWeight: '900', color: tokens.text, textAlign: 'center' },
+  introText: { fontSize: 20, color: tokens.subtle, textAlign: 'center', maxWidth: 760, lineHeight: 30 },
   title: { fontSize: 44, fontWeight: '800', color: tokens.text, textAlign: 'center' },
   subtitle: { fontSize: 20, color: tokens.subtle, textAlign: 'center', maxWidth: 760, lineHeight: 29 },
   primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: tokens.accent, borderColor: '#A8D8DA', borderWidth: 1, minWidth: 260, paddingVertical: 16, paddingHorizontal: 22, borderRadius: 20 },
