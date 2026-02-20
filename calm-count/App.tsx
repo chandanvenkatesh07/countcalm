@@ -526,99 +526,87 @@ export default function App() {
               <View style={styles.starPill}><MaterialCommunityIcons name="star" size={18} color="#B58400" /><Text style={styles.starText}>{stars}</Text></View>
             </View>
 
-            <View style={[styles.questionLayout, isTabletLandscape && styles.questionLayoutWide]}>
-              <View style={[styles.questionPanel, isTabletLandscape && styles.questionPanelWide]}>
+            <View style={styles.gameBoard}>
+              {question.mode !== 'counting' && (
                 <View style={styles.equationBoard}>
-                  {question.mode === 'counting' ? (
-                    <Text style={styles.equationText}>Count these objects = ?</Text>
-                  ) : (
-                    <Text style={styles.equationText}>{question.promptA} + {question.promptB} = ?</Text>
-                  )}
+                  <Text style={styles.equationText}>{question.promptA} + {question.promptB} = ?</Text>
                 </View>
+              )}
 
-                <View style={styles.promptBox}>
-                  {question.mode === 'counting' ? (
-                    renderObjectRows(question.answer, objectTheme.asset)
-                  ) : (
-                    <View style={styles.additionPromptRow}>
-                      {renderObjectRows(question.promptA, objectTheme.asset, 4)}
-                      <Text style={styles.plusSign}>+</Text>
-                      {renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4)}
-                    </View>
-                  )}
-                </View>
-
-                {question.mode === 'addition-image-choice' && revealedAnswer !== null && (
-                  <View style={styles.answerRevealWrap}>
-                    <Text style={styles.answerRevealText}>Great! That is</Text>
-                    <Animated.View style={{ transform: [{ scale: revealScale }] }}>
-                      <LinearGradient colors={['#BFE8FF', '#8FD2FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.answerRevealBadge}>
-                        <Text style={styles.answerRevealNumber}>{revealedAnswer}</Text>
-                      </LinearGradient>
-                    </Animated.View>
-                  </View>
-                )}
-
-                {shouldUseDrag && (
-                  <>
-                    <View
-                      ref={(r) => { dropZoneRef.current = r; }}
-                      onLayout={() => {
-                        dropZoneRef.current?.measureInWindow((x, y, width, height) => {
-                          setDropZoneRect({ x, y, width, height });
-                        });
-                      }}
-                      style={styles.dropZone}
-                    >
-                      <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
-                      <Text style={styles.dropText}>Drop answer here</Text>
-                    </View>
-                    <View style={styles.dragHintRow}>
-                      <MaterialCommunityIcons name="gesture-swipe-up" size={20} color={tokens.subtle} />
-                      <Text style={styles.dragHintText}>Drag the number bag upward</Text>
-                    </View>
-                  </>
-                )}
-              </View>
-
-              <View style={[styles.questionPanel, isTabletLandscape && styles.questionPanelWide]}>
-                {question.mode === 'addition-image-choice' ? (
-                  <View style={styles.optionRow}>
-                    {question.options.map((opt) => (
-                      <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>{renderObjectRows(opt, objectTheme.asset, 4)}</Pressable>
-                    ))}
-                  </View>
+              <View style={styles.promptBox}>
+                {question.mode === 'counting' ? (
+                  renderObjectRows(question.answer, objectTheme.asset)
                 ) : (
-                  <View style={styles.optionRow}>
-                    {question.options.map((opt, idx) => {
-                      const flash = optionFlash?.value === opt ? optionFlash.status : null;
-                      const cardColors = flash === 'wrong'
-                        ? (['#FFDADB', '#FFA7AB', '#FF7C82'] as [string, string, string])
-                        : flash === 'correct'
-                        ? (['#DDF8E1', '#ACEBB7', '#79DB8B'] as [string, string, string])
-                        : bagColors(idx);
-
-                      return (
-                        <Animated.View
-                          key={opt}
-                          style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
-                          {...(draggingNumber === opt ? panResponder.panHandlers : {})}
-                        >
-                          <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
-                            <LinearGradient colors={cardColors} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
-                              <View style={styles.bagKnot} />
-                              <View style={styles.numberInnerGlow} />
-                              <Text style={styles.numberText}>{opt}</Text>
-                            </LinearGradient>
-                          </Pressable>
-                        </Animated.View>
-                      );
-                    })}
+                  <View style={styles.additionPromptRow}>
+                    {renderObjectRows(question.promptA, objectTheme.asset, 4)}
+                    <Text style={styles.plusSign}>+</Text>
+                    {renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4)}
                   </View>
                 )}
-
-                <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ 🎉 ✨</Text>}</View>
               </View>
+
+              {question.mode === 'addition-image-choice' && revealedAnswer !== null && (
+                <View style={styles.answerRevealWrap}>
+                  <Text style={styles.answerRevealText}>Great! That is</Text>
+                  <Animated.View style={{ transform: [{ scale: revealScale }] }}>
+                    <LinearGradient colors={['#BFE8FF', '#8FD2FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.answerRevealBadge}>
+                      <Text style={styles.answerRevealNumber}>{revealedAnswer}</Text>
+                    </LinearGradient>
+                  </Animated.View>
+                </View>
+              )}
+
+              {shouldUseDrag && (
+                <View
+                  ref={(r) => { dropZoneRef.current = r; }}
+                  onLayout={() => {
+                    dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                      setDropZoneRect({ x, y, width, height });
+                    });
+                  }}
+                  style={styles.dropZone}
+                >
+                  <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
+                  <Text style={styles.dropText}>Drop answer here</Text>
+                </View>
+              )}
+
+              {question.mode === 'addition-image-choice' ? (
+                <View style={styles.optionRow}>
+                  {question.options.map((opt) => (
+                    <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>{renderObjectRows(opt, objectTheme.asset, 4)}</Pressable>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.optionRow}>
+                  {question.options.map((opt, idx) => {
+                    const flash = optionFlash?.value === opt ? optionFlash.status : null;
+                    const cardColors = flash === 'wrong'
+                      ? (['#FFDADB', '#FFA7AB', '#FF7C82'] as [string, string, string])
+                      : flash === 'correct'
+                      ? (['#DDF8E1', '#ACEBB7', '#79DB8B'] as [string, string, string])
+                      : bagColors(idx);
+
+                    return (
+                      <Animated.View
+                        key={opt}
+                        style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
+                        {...(draggingNumber === opt ? panResponder.panHandlers : {})}
+                      >
+                        <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
+                          <LinearGradient colors={cardColors} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
+                            <View style={styles.bagKnot} />
+                            <View style={styles.numberInnerGlow} />
+                            <Text style={styles.numberText}>{opt}</Text>
+                          </LinearGradient>
+                        </Pressable>
+                      </Animated.View>
+                    );
+                  })}
+                </View>
+              )}
+
+              <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ 🎉 ✨</Text>}</View>
             </View>
             {sparkle && <ConfettiBurst key={confettiKey} />}
           </>
@@ -756,9 +744,7 @@ function renderObjectRows(count: number, asset: any, perRow = 5) {
       {rows.map((n, idx) => (
         <View key={`${count}-${idx}`} style={styles.appleRow}>
           {Array.from({ length: n }).map((_, j) => (
-            <View key={j} style={styles.objectTile}>
-              <Image source={asset} style={styles.appleIcon3d} resizeMode="contain" />
-            </View>
+            <Image key={j} source={asset} style={styles.appleIcon3d} resizeMode="contain" />
           ))}
         </View>
       ))}
@@ -815,10 +801,7 @@ const styles = StyleSheet.create({
   resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E6B6B6', backgroundColor: '#FFEFEF' },
   resetText: { color: '#7A2D2D', fontWeight: '700' },
   topBar: { width: '100%', maxWidth: 1180, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  questionLayout: { width: '100%', maxWidth: 1180, gap: 16 },
-  questionLayoutWide: { flexDirection: 'row', alignItems: 'stretch' },
-  questionPanel: { backgroundColor: '#F5FBFD', borderRadius: 22, borderWidth: 1, borderColor: '#DDEFF5', padding: 14, gap: 14 },
-  questionPanelWide: { flex: 1 },
+  gameBoard: { width: '100%', maxWidth: 1180, backgroundColor: '#F5FBFD', borderRadius: 22, borderWidth: 1, borderColor: '#DDEFF5', padding: 14, gap: 14 },
   levelLabel: { fontSize: 23, color: tokens.text, fontWeight: '800' },
   starPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF2C8', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
   starText: { fontSize: 18, fontWeight: '700', color: '#8C6500' },
