@@ -176,7 +176,24 @@ export default function App() {
       if (touchingDropZone && draggingNumber === question.answer) {
         setOptionFlash({ value: draggingNumber, status: 'correct' });
         setTimeout(() => setOptionFlash(null), 700);
-        handleLevelSuccess();
+
+        if (dropZoneRect) {
+          const dropCenterX = dropZoneRect.x + dropZoneRect.width / 2;
+          const dropCenterY = dropZoneRect.y + dropZoneRect.height / 2;
+          const snapDx = g.dx + (dropCenterX - g.moveX);
+          const snapDy = g.dy + (dropCenterY - g.moveY);
+
+          Animated.spring(dragPos, {
+            toValue: { x: snapDx, y: snapDy },
+            useNativeDriver: false,
+            bounciness: 7,
+            speed: 16,
+          }).start(() => {
+            handleLevelSuccess();
+          });
+        } else {
+          handleLevelSuccess();
+        }
       } else {
         setOptionFlash({ value: draggingNumber, status: 'wrong' });
         setTimeout(() => setOptionFlash(null), 420);
