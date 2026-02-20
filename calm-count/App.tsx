@@ -53,6 +53,17 @@ const STAR_3D = require('./assets/objects/star3d.png');
 const BALL_3D = require('./assets/objects/ball3d.png');
 const BLOCK_3D = require('./assets/objects/block3d.png');
 const BANANA_3D = require('./assets/objects/banana3d.png');
+
+const VOICE_CLIPS = {
+  home: require('./assets/audio/instruction-home.mp3'),
+  parent: require('./assets/audio/instruction-parent.mp3'),
+  counting: require('./assets/audio/instruction-counting.mp3'),
+  additionImage: require('./assets/audio/instruction-addition-image.mp3'),
+  additionDrag: require('./assets/audio/instruction-addition-drag.mp3'),
+  success: require('./assets/audio/success.mp3'),
+  retry: require('./assets/audio/retry.mp3'),
+  testVoice: require('./assets/audio/test-voice.mp3'),
+};
 const STORAGE_KEY = 'calm_count_stats_v1';
 
 const tokens = {
@@ -167,6 +178,20 @@ export default function App() {
     })();
   }, []);
 
+  function playVoiceClip(clip: any) {
+    if (Platform.OS !== 'web') return false;
+    try {
+      const src = typeof clip === 'string' ? clip : clip?.uri;
+      if (!src) return false;
+      const audio = new (globalThis as any).Audio(src);
+      audio.volume = 1.0;
+      void audio.play();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function speakLine(line: string) {
     if (!settings.voiceEnabled) return;
     Speech.stop();
@@ -222,7 +247,17 @@ export default function App() {
 
   function repeatInstructions() {
     const line = getInstructionLine();
-    speakLine(line);
+    let played = false;
+    if (screen === 'home') played = playVoiceClip(VOICE_CLIPS.home);
+    else if (screen === 'parent') played = playVoiceClip(VOICE_CLIPS.parent);
+    else if (screen === 'chapterIntro') {
+      played = playVoiceClip(chapter === 'counting' ? VOICE_CLIPS.counting : (level <= 5 ? VOICE_CLIPS.additionImage : VOICE_CLIPS.additionDrag));
+    } else if (screen === 'question' && question) {
+      if (question.mode === 'counting') played = playVoiceClip(VOICE_CLIPS.counting);
+      else if (question.mode === 'addition-image-choice') played = playVoiceClip(VOICE_CLIPS.additionImage);
+      else played = playVoiceClip(VOICE_CLIPS.additionDrag);
+    }
+    if (!played) speakLine(line);
     if (screen === 'question') setFeedback(line);
   }
 
@@ -322,7 +357,7 @@ export default function App() {
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     playTone('success');
-    speakLine(successLine);
+    if (!playVoiceClip(VOICE_CLIPS.success)) speakLine(successLine);
     setSparkle(true);
     setConfettiKey((k) => k + 1);
     setTimeout(() => setSparkle(false), 900);
@@ -340,7 +375,7 @@ export default function App() {
     if (!firstAttemptMissed) setFirstAttemptMissed(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     playTone('error');
-    speakLine("Nice try. Let's try again.");
+    if (!playVoiceClip(VOICE_CLIPS.retry)) speakLine("Nice try. Let's try again.");
     setFeedback('Nice try. Let’s try again.');
     Animated.parallel([
       Animated.spring(dragPos, { toValue: { x: 0, y: 0 }, useNativeDriver: false, bounciness: 14 }),
@@ -382,7 +417,7 @@ export default function App() {
             <MaterialCommunityIcons name="bullhorn-outline" size={18} color="#12404A" />
             <Text style={styles.miniBtnText}>Repeat instructions</Text>
           </Pressable>
-          <Pressable style={styles.miniBtn} onPress={() => playTone('success', true)}>
+          <Pressable style={styles.miniBtn} onPress={() => { playTone('success', true); if (!playVoiceClip(VOICE_CLIPS.testVoice)) speakLine('Test chime and voice are working.'); }}>
             <MaterialCommunityIcons name="music-note" size={18} color="#12404A" />
             <Text style={styles.miniBtnText}>Test chime</Text>
           </Pressable>
