@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   PanResponder,
   Pressable,
   SafeAreaView,
@@ -10,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type Screen = 'home' | 'parent' | 'chapterIntro' | 'question' | 'levelComplete';
 type Chapter = 'counting' | 'addition';
@@ -29,15 +31,22 @@ type RoundQuestion = {
   mode: 'counting' | 'addition-image-choice' | 'addition-drag-number';
 };
 
-const TILE_SIZE = 180;
-
-const pastel = {
-  bg: '#F7F4EC',
-  panel: '#FFFFFF',
-  accent: '#98D8D8',
-  good: '#A7E3A1',
-  warn: '#F4C7A1',
-  text: '#2F4F5F',
+const TILE_SIZE = 184;
+const tokens = {
+  color: {
+    bg: '#F7F5EF',
+    card: '#FFFFFF',
+    text: '#244556',
+    subtle: '#5C7B89',
+    accent: '#BFE8E8',
+    accentDeep: '#6CB9BC',
+    success: '#B5E9B9',
+    warning: '#F9D4BC',
+    border: '#D9E8ED',
+    drop: '#E8F6FA',
+  },
+  radius: { sm: 14, md: 20, lg: 28 },
+  space: { xs: 8, sm: 12, md: 16, lg: 24, xl: 32 },
 };
 
 const countingConfigs = [
@@ -56,24 +65,33 @@ export default function App() {
     voiceEnabled: true,
     minimalAnimations: false,
   });
-
   const [chapter, setChapter] = useState<Chapter>('counting');
   const [level, setLevel] = useState(1);
   const [question, setQuestion] = useState<RoundQuestion | null>(null);
-  const [feedback, setFeedback] = useState<string>('');
+  const [feedback, setFeedback] = useState('You can do it!');
   const [stars, setStars] = useState(0);
-
-  const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const [draggingNumber, setDraggingNumber] = useState<number | null>(null);
 
-  const apple = '🍎';
+  const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const cardLift = useRef(new Animated.Value(1)).current;
+  const screenFade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(screenFade, {
+      toValue: 1,
+      duration: settings.minimalAnimations ? 80 : 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+    return () => screenFade.setValue(0);
+  }, [screen]);
 
   useEffect(() => {
     if (screen === 'question') {
       setQuestion(buildQuestion(chapter, level));
-      setFeedback('');
       setDraggingNumber(null);
       dragPos.setValue({ x: 0, y: 0 });
+      setFeedback('You can do it!');
     }
   }, [screen, chapter, level]);
 
@@ -88,23 +106,30 @@ export default function App() {
           dragPos.setValue({ x: gesture.dx, y: gesture.dy });
         },
         onPanResponderRelease: (_, gesture) => {
-          if (draggingNumber == null || !question) return;
+          if (!question || draggingNumber == null) return;
 
-          const droppedInZone = gesture.dy < -80;
-
+          const droppedInZone = gesture.dy < -90;
           if (droppedInZone && draggingNumber === question.answer) {
-            setFeedback(chapter === 'counting' ? `Yes! ${question.answer} apples.` : `Yes! ${question.promptA} plus ${question.promptB} is ${question.answer}. Great job!`);
+            setFeedback(
+              chapter === 'counting'
+                ? `Yes! ${question.answer} apples.`
+                : `Yes! ${question.promptA} plus ${question.promptB} is ${question.answer}. Great job!`
+            );
             setStars((s) => s + 1);
-            setTimeout(() => {
-              nextStep();
-            }, 900);
+            Animated.sequence([
+              Animated.spring(cardLift, { toValue: 1.08, useNativeDriver: true, bounciness: 8 }),
+              Animated.spring(cardLift, { toValue: 1, useNativeDriver: true, bounciness: 6 }),
+            ]).start();
+            setTimeout(nextStep, 900);
           } else {
             setFeedback('Nice try. Let’s try again.');
-            Animated.spring(dragPos, {
-              toValue: { x: 0, y: 0 },
-              useNativeDriver: false,
-              bounciness: 12,
-            }).start();
+            Animated.parallel([
+              Animated.spring(dragPos, { toValue: { x: 0, y: 0 }, useNativeDriver: false, bounciness: 14 }),
+              Animated.sequence([
+                Animated.timing(cardLift, { toValue: 0.96, duration: 90, useNativeDriver: true }),
+                Animated.timing(cardLift, { toValue: 1, duration: 120, useNativeDriver: true }),
+              ]),
+            ]).start();
           }
         },
       }),
@@ -112,8 +137,7 @@ export default function App() {
   );
 
   function startLearning() {
-    const initialChapter: Chapter = settings.skipCounting ? 'addition' : 'counting';
-    setChapter(initialChapter);
+    setChapter(settings.skipCounting ? 'addition' : 'counting');
     setLevel(1);
     setScreen('chapterIntro');
   }
@@ -121,7 +145,7 @@ export default function App() {
   function nextStep() {
     if (chapter === 'counting') {
       if (level < 5) {
-        setLevel(level + 1);
+        setLevel((l) => l + 1);
         setScreen('levelComplete');
       } else {
         setChapter('addition');
@@ -130,18 +154,13 @@ export default function App() {
       }
       return;
     }
-
     if (level < 10) {
-      setLevel(level + 1);
+      setLevel((l) => l + 1);
       setScreen('levelComplete');
-    } else {
-      setScreen('home');
-      setFeedback('Amazing work!');
+      return;
     }
-  }
-
-  function beginQuestions() {
-    setScreen('question');
+    setScreen('home');
+    setFeedback('Amazing work!');
   }
 
   function handleImageChoice(choice: number) {
@@ -149,163 +168,147 @@ export default function App() {
     if (choice === question.answer) {
       setFeedback(`Yes! ${question.answer} apples! Great job!`);
       setStars((s) => s + 1);
-      setTimeout(() => nextStep(), 900);
-    } else {
-      setFeedback('Nice try. Let’s count together and try again.');
+      setTimeout(nextStep, 900);
+      return;
     }
+    setFeedback('Nice try. Let’s count together and try again.');
   }
-
-  const chapterTitle = chapter === 'counting' ? 'Counting Chapter' : 'Addition Chapter';
 
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar style="dark" />
+      <Animated.View style={[styles.screen, { opacity: screenFade }]}> 
+        {screen === 'home' && (
+          <>
+            <Text style={styles.title}>Calm Count</Text>
+            <Text style={styles.subtitle}>Beautiful, calm math learning for ages 4–6</Text>
+            <PrimaryButton title="Start Learning" icon="play-circle-outline" onPress={startLearning} />
+            <Pressable style={styles.parentBtn} onLongPress={() => setScreen('parent')} delayLongPress={600}>
+              <MaterialCommunityIcons name="account-cog-outline" size={22} color={tokens.color.subtle} />
+              <Text style={styles.parentText}>Parent Zone (hold)</Text>
+            </Pressable>
+          </>
+        )}
 
-      {screen === 'home' && (
-        <View style={styles.screen}>
-          <Text style={styles.title}>Calm Count</Text>
-          <Text style={styles.subtitle}>A calm math game for ages 4-6</Text>
+        {screen === 'parent' && (
+          <>
+            <Text style={styles.title}>Parent Zone</Text>
+            <SettingRow label="Child knows counting (Skip chapter)" value={settings.skipCounting} onChange={(v) => setSettings((s) => ({ ...s, skipCounting: v }))} />
+            <SettingRow label="Sound" value={settings.soundEnabled} onChange={(v) => setSettings((s) => ({ ...s, soundEnabled: v }))} />
+            <SettingRow label="Voice prompts" value={settings.voiceEnabled} onChange={(v) => setSettings((s) => ({ ...s, voiceEnabled: v }))} />
+            <SettingRow label="Minimal animations" value={settings.minimalAnimations} onChange={(v) => setSettings((s) => ({ ...s, minimalAnimations: v }))} />
+            <PrimaryButton title="Save & Home" icon="home-outline" onPress={() => setScreen('home')} />
+          </>
+        )}
 
-          <Pressable style={styles.primaryButton} onPress={startLearning}>
-            <Text style={styles.primaryText}>Start Learning</Text>
-          </Pressable>
+        {screen === 'chapterIntro' && (
+          <>
+            <Text style={styles.title}>{chapter === 'counting' ? 'Counting Chapter' : 'Addition Chapter'}</Text>
+            <Text style={styles.subtitle}>
+              {chapter === 'counting'
+                ? 'Drag the right number card into the square.'
+                : level <= 5
+                  ? 'Pick the correct apple group.'
+                  : 'Now we answer with numbers. You can do it!'}
+            </Text>
+            <PrimaryButton title={`Start Level ${level}`} icon="rocket-launch-outline" onPress={() => setScreen('question')} />
+          </>
+        )}
 
-          <Pressable style={styles.secondaryButton} onLongPress={() => setScreen('parent')} delayLongPress={600}>
-            <Text style={styles.secondaryText}>Parent Zone (hold)</Text>
-          </Pressable>
-        </View>
-      )}
+        {screen === 'question' && question && (
+          <>
+            <View style={styles.topBar}>
+              <Text style={styles.levelLabel}>{chapter === 'counting' ? `Counting ${level}/5` : `Addition ${level}/10`}</Text>
+              <View style={styles.starPill}>
+                <MaterialCommunityIcons name="star" size={18} color="#B58400" />
+                <Text style={styles.starText}>{stars}</Text>
+              </View>
+            </View>
 
-      {screen === 'parent' && (
-        <View style={styles.screen}>
-          <Text style={styles.title}>Parent Zone</Text>
-          <SettingRow
-            label="Child knows counting (Skip counting chapter)"
-            value={settings.skipCounting}
-            onChange={(v) => setSettings((s) => ({ ...s, skipCounting: v }))}
-          />
-          <SettingRow
-            label="Sound"
-            value={settings.soundEnabled}
-            onChange={(v) => setSettings((s) => ({ ...s, soundEnabled: v }))}
-          />
-          <SettingRow
-            label="Voice Prompts"
-            value={settings.voiceEnabled}
-            onChange={(v) => setSettings((s) => ({ ...s, voiceEnabled: v }))}
-          />
-          <SettingRow
-            label="Minimal Animations"
-            value={settings.minimalAnimations}
-            onChange={(v) => setSettings((s) => ({ ...s, minimalAnimations: v }))}
-          />
+            <View style={styles.promptBox}>
+              {question.mode === 'counting' ? (
+                renderAppleRows(question.answer)
+              ) : (
+                <View style={styles.additionPromptRow}>
+                  {renderAppleRows(question.promptA, 4)}
+                  <Text style={styles.plusSign}>+</Text>
+                  {renderAppleRows(question.promptB ?? 0, 4)}
+                </View>
+              )}
+            </View>
 
-          <Pressable style={styles.primaryButton} onPress={() => setScreen('home')}>
-            <Text style={styles.primaryText}>Save & Go Home</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {screen === 'chapterIntro' && (
-        <View style={styles.screen}>
-          <Text style={styles.title}>{chapterTitle}</Text>
-          <Text style={styles.subtitle}>
-            {chapter === 'counting'
-              ? 'Drag the correct number into the box.'
-              : level <= 5
-                ? 'Pick the correct apple group.'
-                : 'Now we answer with numbers! Drag and drop.'}
-          </Text>
-          <Pressable style={styles.primaryButton} onPress={beginQuestions}>
-            <Text style={styles.primaryText}>Start Level {level}</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {screen === 'question' && question && (
-        <View style={styles.screen}>
-          <Text style={styles.levelLabel}>
-            {chapter === 'counting' ? `Counting ${level}/5` : `Addition ${level}/10`}
-          </Text>
-
-          <View style={styles.promptBox}>
-            {question.mode === 'counting' ? (
-              renderAppleRows(question.answer)
-            ) : (
-              <View style={styles.additionPromptRow}>
-                {renderAppleRows(question.promptA, 4)}
-                <Text style={styles.plusSign}>+</Text>
-                {renderAppleRows(question.promptB ?? 0, 4)}
+            {shouldUseDrag && (
+              <View style={styles.dropZone}>
+                <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.color.subtle} />
+                <Text style={styles.dropText}>Drop answer here</Text>
               </View>
             )}
-          </View>
 
-          {shouldUseDrag && (
-            <View style={styles.dropZone}>
-              <Text style={styles.dropText}>Drop answer here</Text>
-            </View>
-          )}
-
-          {question.mode === 'addition-image-choice' ? (
-            <View style={styles.optionRow}>
-              {question.options.map((opt) => (
-                <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>
-                  {renderAppleRows(opt, 4)}
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.optionRow}>
-              {question.options.map((opt) => (
-                <Animated.View
-                  key={opt}
-                  style={[styles.numberCard, draggingNumber === opt ? dragPos.getLayout() : undefined]}
-                  {...(draggingNumber === opt ? panResponder.panHandlers : {})}
-                >
-                  <Pressable
-                    style={styles.fullCardPress}
-                    onPressIn={() => {
-                      setDraggingNumber(opt);
-                      dragPos.setValue({ x: 0, y: 0 });
-                    }}
-                  >
-                    <Text style={styles.numberText}>{opt}</Text>
+            {question.mode === 'addition-image-choice' ? (
+              <View style={styles.optionRow}>
+                {question.options.map((opt) => (
+                  <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>
+                    {renderAppleRows(opt, 4)}
                   </Pressable>
-                </Animated.View>
-              ))}
+                ))}
+              </View>
+            ) : (
+              <View style={styles.optionRow}>
+                {question.options.map((opt) => (
+                  <Animated.View
+                    key={opt}
+                    style={[
+                      styles.numberCard,
+                      draggingNumber === opt ? dragPos.getLayout() : undefined,
+                      draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined,
+                    ]}
+                    {...(draggingNumber === opt ? panResponder.panHandlers : {})}
+                  >
+                    <Pressable
+                      style={styles.fullCardPress}
+                      onPressIn={() => {
+                        setDraggingNumber(opt);
+                        dragPos.setValue({ x: 0, y: 0 });
+                        cardLift.setValue(1.03);
+                      }}
+                    >
+                      <Text style={styles.numberText}>{opt}</Text>
+                    </Pressable>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.feedbackPill}>
+              <MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.color.subtle} />
+              <Text style={styles.feedback}>{feedback}</Text>
             </View>
-          )}
+          </>
+        )}
 
-          <Text style={styles.feedback}>{feedback || 'You can do it!'}</Text>
-          <Text style={styles.stars}>⭐ {stars}</Text>
-        </View>
-      )}
-
-      {screen === 'levelComplete' && (
-        <View style={styles.screen}>
-          <Text style={styles.title}>Great Job!</Text>
-          <Text style={styles.subtitle}>Ready for the next level?</Text>
-          {chapter === 'addition' && level === 6 && (
-            <Text style={styles.transition}>Now we answer with numbers. You can do it!</Text>
-          )}
-          <Pressable style={styles.primaryButton} onPress={() => setScreen('question')}>
-            <Text style={styles.primaryText}>Start Level {level}</Text>
-          </Pressable>
-        </View>
-      )}
+        {screen === 'levelComplete' && (
+          <>
+            <MaterialCommunityIcons name="check-decagram" size={58} color={tokens.color.accentDeep} />
+            <Text style={styles.title}>Great Job!</Text>
+            <Text style={styles.subtitle}>{chapter === 'addition' && level === 6 ? 'Now we answer with numbers. You can do it!' : 'Ready for the next level?'}</Text>
+            <PrimaryButton title={`Start Level ${level}`} icon="arrow-right-circle-outline" onPress={() => setScreen('question')} />
+          </>
+        )}
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
-function SettingRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
+function PrimaryButton({ title, icon, onPress }: { title: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; onPress: () => void }) {
+  return (
+    <Pressable style={styles.primaryButton} onPress={onPress}>
+      <MaterialCommunityIcons name={icon} size={22} color="#12404A" />
+      <Text style={styles.primaryText}>{title}</Text>
+    </Pressable>
+  );
+}
+
+function SettingRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <View style={styles.settingRow}>
       <Text style={styles.settingLabel}>{label}</Text>
@@ -318,46 +321,25 @@ function buildQuestion(chapter: Chapter, level: number): RoundQuestion {
   if (chapter === 'counting') {
     const cfg = countingConfigs[Math.max(0, Math.min(4, level - 1))];
     const answer = randInt(cfg.min, cfg.max);
-    return {
-      promptA: answer,
-      answer,
-      options: numberOptions(answer, cfg.optionCount, cfg.min, cfg.max),
-      mode: 'counting',
-    };
+    return { promptA: answer, answer, options: numberOptions(answer, cfg.optionCount, cfg.min, cfg.max), mode: 'counting' };
   }
-
   if (level <= 5) {
     const max = Math.min(7, level + 2);
     const a = randInt(1, max - 1);
     const b = randInt(1, max - a);
     const answer = a + b;
-    return {
-      promptA: a,
-      promptB: b,
-      answer,
-      options: numberOptions(answer, Math.min(3, level + 1), 1, 10),
-      mode: 'addition-image-choice',
-    };
+    return { promptA: a, promptB: b, answer, options: numberOptions(answer, Math.min(3, level + 1), 1, 10), mode: 'addition-image-choice' };
   }
-
   const max = Math.min(10, level);
   const a = randInt(1, max - 1);
   const b = randInt(1, max - a);
   const answer = a + b;
-  return {
-    promptA: a,
-    promptB: b,
-    answer,
-    options: numberOptions(answer, level < 10 ? 3 : 4, 1, 10),
-    mode: 'addition-drag-number',
-  };
+  return { promptA: a, promptB: b, answer, options: numberOptions(answer, level < 10 ? 3 : 4, 1, 10), mode: 'addition-drag-number' };
 }
 
 function numberOptions(answer: number, count: number, min: number, max: number) {
   const set = new Set<number>([answer]);
-  while (set.size < count) {
-    set.add(randInt(min, max));
-  }
+  while (set.size < count) set.add(randInt(min, max));
   return Array.from(set).sort(() => Math.random() - 0.5);
 }
 
@@ -373,7 +355,7 @@ function renderAppleRows(count: number, perRow = 5) {
       {rows.map((n, idx) => (
         <View key={`${count}-${idx}`} style={styles.appleRow}>
           {Array.from({ length: n }).map((_, j) => (
-            <Text key={j} style={styles.bigApple}>{'🍎'}</Text>
+            <Text key={j} style={styles.bigApple}>🍎</Text>
           ))}
         </View>
       ))}
@@ -382,102 +364,49 @@ function renderAppleRows(count: number, perRow = 5) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: pastel.bg },
-  screen: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    gap: 16,
-  },
-  title: { fontSize: 44, fontWeight: '700', color: pastel.text, textAlign: 'center' },
-  subtitle: { fontSize: 20, color: pastel.text, textAlign: 'center', maxWidth: 700 },
+  root: { flex: 1, backgroundColor: tokens.color.bg },
+  screen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: tokens.space.lg, gap: tokens.space.md },
+  title: { fontSize: 46, fontWeight: '800', color: tokens.color.text, textAlign: 'center', letterSpacing: 0.2 },
+  subtitle: { fontSize: 21, color: tokens.color.subtle, textAlign: 'center', maxWidth: 760, lineHeight: 30 },
   primaryButton: {
-    backgroundColor: pastel.accent,
-    paddingHorizontal: 26,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: tokens.color.accent,
+    borderColor: '#A8D8DA',
+    borderWidth: 1,
+    minWidth: 260,
     paddingVertical: 16,
-    borderRadius: 18,
-    minWidth: 240,
-    alignItems: 'center',
+    paddingHorizontal: 22,
+    borderRadius: tokens.radius.md,
+    shadowColor: '#8FB7BE',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
-  primaryText: { fontSize: 24, fontWeight: '700', color: '#134' },
-  secondaryButton: {
-    backgroundColor: '#E9E7DF',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 16,
-  },
-  secondaryText: { fontSize: 20, color: pastel.text },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    maxWidth: 760,
-    alignItems: 'center',
-    backgroundColor: pastel.panel,
-    padding: 16,
-    borderRadius: 12,
-  },
-  settingLabel: { fontSize: 20, color: pastel.text, width: '80%' },
-  levelLabel: { fontSize: 22, color: pastel.text, fontWeight: '700' },
-  promptBox: {
-    backgroundColor: pastel.panel,
-    borderRadius: 24,
-    paddingHorizontal: 30,
-    paddingVertical: 20,
-    minHeight: 110,
-    justifyContent: 'center',
-  },
-  promptText: { fontSize: 54, textAlign: 'center' },
+  primaryText: { fontSize: 24, fontWeight: '700', color: '#12404A' },
+  parentBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#ECE8DC', borderRadius: 14 },
+  parentText: { fontSize: 18, color: tokens.color.subtle },
+  settingRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', maxWidth: 780, alignItems: 'center', backgroundColor: tokens.color.card, padding: 18, borderRadius: 16, borderWidth: 1, borderColor: tokens.color.border },
+  settingLabel: { fontSize: 20, color: tokens.color.text, width: '80%' },
+  topBar: { width: '100%', maxWidth: 920, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  levelLabel: { fontSize: 23, color: tokens.color.text, fontWeight: '800' },
+  starPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF2C8', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  starText: { fontSize: 18, fontWeight: '700', color: '#8C6500' },
+  promptBox: { backgroundColor: tokens.color.card, borderRadius: tokens.radius.lg, paddingHorizontal: 26, paddingVertical: 18, minHeight: 124, justifyContent: 'center', borderWidth: 1, borderColor: tokens.color.border },
   additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18 },
-  plusSign: { fontSize: 54, fontWeight: '700', color: pastel.text, marginHorizontal: 8 },
+  plusSign: { fontSize: 56, fontWeight: '800', color: tokens.color.text, marginHorizontal: 8 },
   appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
-  appleRow: { flexDirection: 'row', flexWrap: 'nowrap', justifyContent: 'center', gap: 14 },
-  bigApple: { fontSize: 54, lineHeight: 62 },
-  dropZone: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: '#AFDAE1',
-    backgroundColor: '#DDF0F4',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropText: { fontSize: 26, color: pastel.text, fontWeight: '600', textAlign: 'center', paddingHorizontal: 12 },
-  optionRow: {
-    flexDirection: 'row',
-    gap: 16,
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imageOption: {
-    minWidth: 220,
-    minHeight: 170,
-    borderRadius: 18,
-    backgroundColor: '#F6FBFD',
-    borderWidth: 2,
-    borderColor: '#D7EAEE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  optionApple: { fontSize: 42 },
-  numberCard: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
-    borderRadius: 24,
-    backgroundColor: '#F8D8C9',
-    borderWidth: 2,
-    borderColor: '#E8B8A5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
+  bigApple: { fontSize: 56, lineHeight: 62 },
+  dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.color.drop, justifyContent: 'center', alignItems: 'center', gap: 8 },
+  dropText: { fontSize: 20, color: tokens.color.subtle, fontWeight: '700', textAlign: 'center', paddingHorizontal: 10 },
+  optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
+  imageOption: { minWidth: 228, minHeight: 176, borderRadius: 20, backgroundColor: '#F7FBFD', borderWidth: 1, borderColor: tokens.color.border, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
+  numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, backgroundColor: tokens.color.warning, borderWidth: 1, borderColor: '#E7BFA2', justifyContent: 'center', alignItems: 'center' },
   fullCardPress: { flex: 1, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  numberText: { fontSize: 72, fontWeight: '700', color: pastel.text },
-  feedback: { fontSize: 22, color: '#2A6656', textAlign: 'center', minHeight: 30 },
-  stars: { fontSize: 24, color: '#B58400', fontWeight: '700' },
-  transition: { fontSize: 24, color: pastel.text, textAlign: 'center', maxWidth: 700 },
+  numberText: { fontSize: 74, fontWeight: '800', color: tokens.color.text },
+  feedbackPill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EEF7FA', borderWidth: 1, borderColor: '#D2E8EF', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: 920 },
+  feedback: { fontSize: 21, color: '#2A6656', textAlign: 'center' },
 });
