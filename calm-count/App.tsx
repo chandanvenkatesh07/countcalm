@@ -540,7 +540,13 @@ export default function App() {
             <View style={styles.gameBoard}>
               {question.mode !== 'counting' && (
                 <View style={styles.equationBoard}>
-                  <Text style={styles.equationText}>{question.promptA} + {question.promptB} = ?</Text>
+                  <View style={styles.equationAlignRow}>
+                    <View style={styles.promptGroup}><Text style={styles.equationText}>{question.promptA}</Text></View>
+                    <View style={styles.symbolSlot}><Text style={styles.equationText}>+</Text></View>
+                    <View style={styles.promptGroup}><Text style={styles.equationText}>{question.promptB}</Text></View>
+                    <View style={styles.symbolSlot}><Text style={styles.equationText}>=</Text></View>
+                    <View style={styles.inlineDropZoneGhost}><Text style={styles.equationText}>?</Text></View>
+                  </View>
                 </View>
               )}
 
@@ -549,9 +555,9 @@ export default function App() {
                   renderObjectRows(question.answer, objectTheme.asset, 5, 150)
                 ) : (
                   <View style={styles.additionPromptRow}>
-                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 56)}</View>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 72)}</View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>+</Text></View>
-                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 56)}</View>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 72)}</View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
                     <View style={styles.inlineDropZone}><MaterialCommunityIcons name="help" size={30} color={tokens.subtle} /></View>
                   </View>
@@ -604,7 +610,7 @@ export default function App() {
                     <Pressable key={opt} style={styles.imageOptionWrap} onPress={() => handleImageChoice(opt)}>
                       <LinearGradient colors={bagColors(idx)} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.imageOption}>
                         <View style={styles.numberInnerGlow} />
-                        {renderObjectRows(opt, objectTheme.asset, 4, 56)}
+                        {renderObjectRows(opt, objectTheme.asset, 4, 72)}
                       </LinearGradient>
                     </Pressable>
                   ))}
@@ -845,13 +851,15 @@ const styles = StyleSheet.create({
   starPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF2C8', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
   starText: { fontSize: 18, fontWeight: '700', color: '#8C6500' },
   equationBoard: { width: '100%', backgroundColor: '#2C7F5E', borderRadius: 18, borderWidth: 3, borderColor: '#8B6D42', paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  equationText: { fontSize: 40, fontWeight: '900', color: '#E8FFF2', textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
+  equationAlignRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' },
+  equationText: { fontSize: 50, fontWeight: '900', color: '#E8FFF2', textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2, lineHeight: 56 },
   promptBox: { backgroundColor: '#BDEEFF', borderRadius: 28, paddingHorizontal: 26, paddingVertical: 18, minHeight: 124, justifyContent: 'center', borderWidth: 1, borderColor: '#99D6EB' },
   additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' },
-  promptGroup: { minWidth: 180, alignItems: 'center', justifyContent: 'center' },
-  symbolSlot: { width: 54, alignItems: 'center', justifyContent: 'center' },
-  plusSign: { fontSize: 56, fontWeight: '800', color: tokens.text, lineHeight: 60 },
-  inlineDropZone: { width: 124, height: 124, borderRadius: 18, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: '#EAF7FC', alignItems: 'center', justifyContent: 'center' },
+  promptGroup: { minWidth: 200, alignItems: 'center', justifyContent: 'center' },
+  symbolSlot: { width: 70, alignItems: 'center', justifyContent: 'center' },
+  plusSign: { fontSize: 64, fontWeight: '800', color: tokens.text, lineHeight: 66 },
+  inlineDropZone: { width: 150, height: 150, borderRadius: 18, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: '#EAF7FC', alignItems: 'center', justifyContent: 'center' },
+  inlineDropZoneGhost: { width: 150, height: 1, opacity: 0 },
   appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
   appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
@@ -864,8 +872,8 @@ const styles = StyleSheet.create({
   repeatInlineBtn: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D8EEF4', borderWidth: 1, borderColor: '#AED5DE', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginTop: 4 },
   repeatInlineBtnText: { color: '#12404A', fontWeight: '700' },
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-  imageOptionWrap: { width: 320, minHeight: 208, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
-  imageOption: { width: '100%', minHeight: 208, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, overflow: 'hidden' },
+  imageOptionWrap: { width: 360, minHeight: 236, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
+  imageOption: { width: '100%', minHeight: 236, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, overflow: 'hidden' },
   numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   bagKnot: { position: 'absolute', top: -2, width: 72, height: 22, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, backgroundColor: 'rgba(105,74,42,0.65)' },
