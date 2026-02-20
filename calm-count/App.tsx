@@ -566,29 +566,31 @@ export default function App() {
               )}
 
               {shouldUseDrag && (
-                <View
-                  ref={(r) => { dropZoneRef.current = r; }}
-                  onLayout={() => {
-                    dropZoneRef.current?.measureInWindow((x, y, width, height) => {
-                      setDropZoneRect({ x, y, width, height });
-                    });
-                  }}
-                  style={styles.dropZone}
-                >
-                  {snappedValue == null ? (
-                    <MaterialCommunityIcons name="tray-arrow-down" size={32} color={tokens.subtle} />
-                  ) : (
-                    <LinearGradient
-                      colors={bagColors(Math.max(0, question.options.indexOf(snappedValue)))}
-                      start={{ x: 0.1, y: 0.1 }}
-                      end={{ x: 0.9, y: 1 }}
-                      style={styles.snapCard}
-                    >
-                      <View style={styles.bagKnot} />
-                      <View style={styles.numberInnerGlow} />
-                      <Text style={styles.snapCardText}>{snappedValue}</Text>
-                    </LinearGradient>
-                  )}
+                <View style={styles.dropZoneWrap}>
+                  <View
+                    ref={(r) => { dropZoneRef.current = r; }}
+                    onLayout={() => {
+                      dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                        setDropZoneRect({ x, y, width, height });
+                      });
+                    }}
+                    style={styles.dropZone}
+                  >
+                    {snappedValue == null ? (
+                      <MaterialCommunityIcons name="tray-arrow-down" size={32} color={tokens.subtle} />
+                    ) : (
+                      <LinearGradient
+                        colors={bagColors(Math.max(0, question.options.indexOf(snappedValue)))}
+                        start={{ x: 0.1, y: 0.1 }}
+                        end={{ x: 0.9, y: 1 }}
+                        style={styles.snapCard}
+                      >
+                        <View style={styles.bagKnot} />
+                        <View style={styles.numberInnerGlow} />
+                        <Text selectable={false} style={styles.snapCardText}>{snappedValue}</Text>
+                      </LinearGradient>
+                    )}
+                  </View>
                 </View>
               )}
 
@@ -623,7 +625,7 @@ export default function App() {
                           <LinearGradient colors={cardColors} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
                             <View style={styles.bagKnot} />
                             <View style={styles.numberInnerGlow} />
-                            <Text style={styles.numberText}>{opt}</Text>
+                            <Text selectable={false} style={styles.numberText}>{opt}</Text>
                           </LinearGradient>
                         </Pressable>
                       </Animated.View>
@@ -845,13 +847,14 @@ const styles = StyleSheet.create({
   appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   appleIcon3d: { width: 72, height: 72 },
+  dropZoneWrap: { width: '100%', alignItems: 'center', marginTop: 8, marginBottom: 24 },
   dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.drop, justifyContent: 'center', alignItems: 'center', alignSelf: 'center' },
   snapCard: { width: TILE_SIZE - 12, height: TILE_SIZE - 12, borderRadius: 20, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   snapCardText: { fontSize: 72, fontWeight: '900', color: '#264A5A' },
   dropText: { fontSize: 20, color: tokens.subtle, fontWeight: '700', textAlign: 'center', paddingHorizontal: 10 },
   repeatInlineBtn: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D8EEF4', borderWidth: 1, borderColor: '#AED5DE', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginTop: 4 },
   repeatInlineBtnText: { color: '#12404A', fontWeight: '700' },
-  optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
+  optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   imageOption: { minWidth: 236, minHeight: 188, borderRadius: 22, backgroundColor: '#FDFEFE', borderWidth: 1, borderColor: tokens.border, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 },
   numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
