@@ -173,7 +173,12 @@ export default function App() {
 
       const touchingDropZone = !!dropZoneRect && overlaps(cardRect, dropZoneRect);
 
-      if (touchingDropZone && draggingNumber === question.answer) {
+      if (!touchingDropZone) {
+        Animated.spring(dragPos, { toValue: { x: 0, y: 0 }, useNativeDriver: false, bounciness: 12 }).start();
+        return;
+      }
+
+      if (draggingNumber === question.answer) {
         setOptionFlash({ value: draggingNumber, status: 'correct' });
         setTimeout(() => setOptionFlash(null), 700);
 
