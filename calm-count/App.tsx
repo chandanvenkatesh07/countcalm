@@ -549,9 +549,11 @@ export default function App() {
                   renderObjectRows(question.answer, objectTheme.asset, 5, 150)
                 ) : (
                   <View style={styles.additionPromptRow}>
-                    {renderObjectRows(question.promptA, objectTheme.asset, 4)}
-                    <Text style={styles.plusSign}>+</Text>
-                    {renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4)}
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 56)}</View>
+                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>+</Text></View>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 56)}</View>
+                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
+                    <View style={styles.inlineDropZone}><MaterialCommunityIcons name="help" size={30} color={tokens.subtle} /></View>
                   </View>
                 )}
               </View>
@@ -845,8 +847,11 @@ const styles = StyleSheet.create({
   equationBoard: { width: '100%', backgroundColor: '#2C7F5E', borderRadius: 18, borderWidth: 3, borderColor: '#8B6D42', paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   equationText: { fontSize: 40, fontWeight: '900', color: '#E8FFF2', textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
   promptBox: { backgroundColor: '#BDEEFF', borderRadius: 28, paddingHorizontal: 26, paddingVertical: 18, minHeight: 124, justifyContent: 'center', borderWidth: 1, borderColor: '#99D6EB' },
-  additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18 },
-  plusSign: { fontSize: 56, fontWeight: '800', color: tokens.text, marginHorizontal: 8 },
+  additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' },
+  promptGroup: { minWidth: 180, alignItems: 'center', justifyContent: 'center' },
+  symbolSlot: { width: 54, alignItems: 'center', justifyContent: 'center' },
+  plusSign: { fontSize: 56, fontWeight: '800', color: tokens.text, lineHeight: 60 },
+  inlineDropZone: { width: 124, height: 124, borderRadius: 18, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: '#EAF7FC', alignItems: 'center', justifyContent: 'center' },
   appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
   appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
