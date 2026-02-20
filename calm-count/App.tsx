@@ -101,6 +101,7 @@ export default function App() {
   const [confettiKey, setConfettiKey] = useState(0);
   const [optionFlash, setOptionFlash] = useState<{ value: number; status: 'wrong' | 'correct' } | null>(null);
   const [dropZoneRect, setDropZoneRect] = useState<Rect | null>(null);
+  const [snappedValue, setSnappedValue] = useState<number | null>(null);
 
   const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const cardLift = useRef(new Animated.Value(1)).current;
@@ -142,6 +143,7 @@ export default function App() {
       setFeedback('You can do it!');
       setRevealedAnswer(null);
       setOptionFlash(null);
+      setSnappedValue(null);
       revealScale.setValue(0.6);
       setTimeout(() => {
         dropZoneRef.current?.measureInWindow((x, y, width, height) => {
@@ -180,25 +182,10 @@ export default function App() {
 
       if (draggingNumber === question.answer) {
         setOptionFlash({ value: draggingNumber, status: 'correct' });
+        setSnappedValue(draggingNumber);
         setTimeout(() => setOptionFlash(null), 700);
-
-        if (dropZoneRect) {
-          const dropCenterX = dropZoneRect.x + dropZoneRect.width / 2;
-          const dropCenterY = dropZoneRect.y + dropZoneRect.height / 2;
-          const snapDx = g.dx + (dropCenterX - g.moveX);
-          const snapDy = g.dy + (dropCenterY - g.moveY);
-
-          Animated.spring(dragPos, {
-            toValue: { x: snapDx, y: snapDy },
-            useNativeDriver: false,
-            bounciness: 7,
-            speed: 16,
-          }).start(() => {
-            handleLevelSuccess();
-          });
-        } else {
-          handleLevelSuccess();
-        }
+        Animated.spring(dragPos, { toValue: { x: 0, y: 0 }, useNativeDriver: false, bounciness: 12 }).start();
+        setTimeout(() => handleLevelSuccess(), 220);
       } else {
         setOptionFlash({ value: draggingNumber, status: 'wrong' });
         setTimeout(() => setOptionFlash(null), 420);
@@ -588,7 +575,20 @@ export default function App() {
                   }}
                   style={styles.dropZone}
                 >
-                  <MaterialCommunityIcons name="tray-arrow-down" size={32} color={tokens.subtle} />
+                  {snappedValue == null ? (
+                    <MaterialCommunityIcons name="tray-arrow-down" size={32} color={tokens.subtle} />
+                  ) : (
+                    <LinearGradient
+                      colors={bagColors(Math.max(0, question.options.indexOf(snappedValue)))}
+                      start={{ x: 0.1, y: 0.1 }}
+                      end={{ x: 0.9, y: 1 }}
+                      style={styles.snapCard}
+                    >
+                      <View style={styles.bagKnot} />
+                      <View style={styles.numberInnerGlow} />
+                      <Text style={styles.snapCardText}>{snappedValue}</Text>
+                    </LinearGradient>
+                  )}
                 </View>
               )}
 
@@ -611,7 +611,12 @@ export default function App() {
                     return (
                       <Animated.View
                         key={opt}
-                        style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
+                        style={[
+                          styles.numberCardWrap,
+                          snappedValue === opt ? { opacity: 0.15 } : undefined,
+                          draggingNumber === opt ? dragPos.getLayout() : undefined,
+                          draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined,
+                        ]}
                         {...(draggingNumber === opt ? panResponder.panHandlers : {})}
                       >
                         <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
@@ -841,6 +846,8 @@ const styles = StyleSheet.create({
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   appleIcon3d: { width: 72, height: 72 },
   dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.drop, justifyContent: 'center', alignItems: 'center', alignSelf: 'center' },
+  snapCard: { width: TILE_SIZE - 12, height: TILE_SIZE - 12, borderRadius: 20, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  snapCardText: { fontSize: 72, fontWeight: '900', color: '#264A5A' },
   dropText: { fontSize: 20, color: tokens.subtle, fontWeight: '700', textAlign: 'center', paddingHorizontal: 10 },
   repeatInlineBtn: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D8EEF4', borderWidth: 1, borderColor: '#AED5DE', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginTop: 4 },
   repeatInlineBtnText: { color: '#12404A', fontWeight: '700' },
