@@ -535,7 +535,7 @@ export default function App() {
 
               <View style={styles.promptBox}>
                 {question.mode === 'counting' ? (
-                  renderObjectRows(question.answer, objectTheme.asset)
+                  renderObjectRows(question.answer, objectTheme.asset, 5, 150)
                 ) : (
                   <View style={styles.additionPromptRow}>
                     {renderObjectRows(question.promptA, objectTheme.asset, 4)}
@@ -566,8 +566,7 @@ export default function App() {
                   }}
                   style={styles.dropZone}
                 >
-                  <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
-                  <Text style={styles.dropText}>Drop answer here</Text>
+                  <MaterialCommunityIcons name="tray-arrow-down" size={32} color={tokens.subtle} />
                 </View>
               )}
 
@@ -605,6 +604,11 @@ export default function App() {
                   })}
                 </View>
               )}
+
+              <Pressable style={styles.repeatInlineBtn} onPress={repeatInstructions}>
+                <MaterialCommunityIcons name="bullhorn-outline" size={18} color="#12404A" />
+                <Text style={styles.repeatInlineBtnText}>Repeat instructions</Text>
+              </Pressable>
 
               <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ 🎉 ✨</Text>}</View>
             </View>
@@ -736,7 +740,7 @@ function bagColors(idx: number): [string, string, string] {
   return palettes[idx % palettes.length];
 }
 
-function renderObjectRows(count: number, asset: any, perRow = 5) {
+function renderObjectRows(count: number, asset: any, perRow = 5, iconSize = 72) {
   const rows: number[] = [];
   for (let i = 0; i < count; i += perRow) rows.push(Math.min(perRow, count - i));
   return (
@@ -744,7 +748,7 @@ function renderObjectRows(count: number, asset: any, perRow = 5) {
       {rows.map((n, idx) => (
         <View key={`${count}-${idx}`} style={styles.appleRow}>
           {Array.from({ length: n }).map((_, j) => (
-            <Image key={j} source={asset} style={styles.appleIcon3d} resizeMode="contain" />
+            <Image key={j} source={asset} style={[styles.appleIcon3d, { width: iconSize, height: iconSize }]} resizeMode="contain" />
           ))}
         </View>
       ))}
@@ -814,10 +818,10 @@ const styles = StyleSheet.create({
   appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   appleIcon3d: { width: 72, height: 72 },
-  dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.drop, justifyContent: 'center', alignItems: 'center', gap: 8 },
+  dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.drop, justifyContent: 'center', alignItems: 'center', alignSelf: 'center' },
   dropText: { fontSize: 20, color: tokens.subtle, fontWeight: '700', textAlign: 'center', paddingHorizontal: 10 },
-  dragHintRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -4, backgroundColor: '#EFF8FB', borderWidth: 1, borderColor: '#D5EAF1', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
-  dragHintText: { color: tokens.subtle, fontWeight: '700' },
+  repeatInlineBtn: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D8EEF4', borderWidth: 1, borderColor: '#AED5DE', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginTop: 4 },
+  repeatInlineBtnText: { color: '#12404A', fontWeight: '700' },
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
   imageOption: { minWidth: 236, minHeight: 188, borderRadius: 22, backgroundColor: '#FDFEFE', borderWidth: 1, borderColor: tokens.border, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 },
   numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
