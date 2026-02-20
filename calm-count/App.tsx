@@ -183,8 +183,8 @@ export default function App() {
       if (draggingNumber === question.answer) {
         setOptionFlash({ value: draggingNumber, status: 'correct' });
         setSnappedValue(draggingNumber);
+        setDraggingNumber(null);
         setTimeout(() => setOptionFlash(null), 700);
-        Animated.spring(dragPos, { toValue: { x: 0, y: 0 }, useNativeDriver: false, bounciness: 12 }).start();
         setTimeout(() => handleLevelSuccess(), 220);
       } else {
         setOptionFlash({ value: draggingNumber, status: 'wrong' });
@@ -615,7 +615,7 @@ export default function App() {
                         key={opt}
                         style={[
                           styles.numberCardWrap,
-                          snappedValue === opt ? { opacity: 0.15 } : undefined,
+                          snappedValue === opt ? { opacity: 0 } : undefined,
                           draggingNumber === opt ? dragPos.getLayout() : undefined,
                           draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined,
                         ]}
