@@ -7,6 +7,7 @@ import {
   Pressable,
   SafeAreaView,
   StyleSheet,
+  Image,
   Switch,
   Text,
   View,
@@ -48,6 +49,8 @@ const tokens = {
   radius: { sm: 14, md: 20, lg: 28 },
   space: { xs: 8, sm: 12, md: 16, lg: 24, xl: 32 },
 };
+
+const APPLE_3D = require('./assets/objects/apple3d.png');
 
 const countingConfigs = [
   { min: 1, max: 3, optionCount: 2 },
@@ -355,7 +358,7 @@ function renderAppleRows(count: number, perRow = 5) {
       {rows.map((n, idx) => (
         <View key={`${count}-${idx}`} style={styles.appleRow}>
           {Array.from({ length: n }).map((_, j) => (
-            <Text key={j} style={styles.bigApple}>🍎</Text>
+            <Image key={j} source={APPLE_3D} style={styles.appleIcon3d} resizeMode="contain" />
           ))}
         </View>
       ))}
@@ -398,12 +401,12 @@ const styles = StyleSheet.create({
   additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18 },
   plusSign: { fontSize: 56, fontWeight: '800', color: tokens.color.text, marginHorizontal: 8 },
   appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
-  appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
-  bigApple: { fontSize: 56, lineHeight: 62 },
+  appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
+  appleIcon3d: { width: 66, height: 66 },
   dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.color.drop, justifyContent: 'center', alignItems: 'center', gap: 8 },
   dropText: { fontSize: 20, color: tokens.color.subtle, fontWeight: '700', textAlign: 'center', paddingHorizontal: 10 },
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
-  imageOption: { minWidth: 228, minHeight: 176, borderRadius: 20, backgroundColor: '#F7FBFD', borderWidth: 1, borderColor: tokens.color.border, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
+  imageOption: { minWidth: 236, minHeight: 188, borderRadius: 22, backgroundColor: '#FDFEFE', borderWidth: 1, borderColor: tokens.color.border, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12, shadowColor: '#9FC2CC', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, backgroundColor: tokens.color.warning, borderWidth: 1, borderColor: '#E7BFA2', justifyContent: 'center', alignItems: 'center' },
   fullCardPress: { flex: 1, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   numberText: { fontSize: 74, fontWeight: '800', color: tokens.color.text },
