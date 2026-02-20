@@ -598,8 +598,13 @@ export default function App() {
 
               {question.mode === 'addition-image-choice' ? (
                 <View style={styles.optionRow}>
-                  {question.options.map((opt) => (
-                    <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>{renderObjectRows(opt, objectTheme.asset, 4)}</Pressable>
+                  {question.options.map((opt, idx) => (
+                    <Pressable key={opt} style={styles.imageOptionWrap} onPress={() => handleImageChoice(opt)}>
+                      <LinearGradient colors={bagColors(idx)} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.imageOption}>
+                        <View style={styles.numberInnerGlow} />
+                        {renderObjectRows(opt, objectTheme.asset, 4, 56)}
+                      </LinearGradient>
+                    </Pressable>
                   ))}
                 </View>
               ) : (
@@ -854,7 +859,8 @@ const styles = StyleSheet.create({
   repeatInlineBtn: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D8EEF4', borderWidth: 1, borderColor: '#AED5DE', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginTop: 4 },
   repeatInlineBtnText: { color: '#12404A', fontWeight: '700' },
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-  imageOption: { minWidth: 236, minHeight: 188, borderRadius: 22, backgroundColor: '#FDFEFE', borderWidth: 1, borderColor: tokens.border, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 },
+  imageOptionWrap: { width: 320, minHeight: 208, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
+  imageOption: { width: '100%', minHeight: 208, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, overflow: 'hidden' },
   numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   bagKnot: { position: 'absolute', top: -2, width: 72, height: 22, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, backgroundColor: 'rgba(105,74,42,0.65)' },
