@@ -230,11 +230,13 @@ export default function App() {
 
           <View style={styles.promptBox}>
             {question.mode === 'counting' ? (
-              <Text style={styles.promptText}>{apple.repeat(question.answer)}</Text>
+              renderAppleRows(question.answer)
             ) : (
-              <Text style={styles.promptText}>
-                {apple.repeat(question.promptA)} + {apple.repeat(question.promptB ?? 0)}
-              </Text>
+              <View style={styles.additionPromptRow}>
+                {renderAppleRows(question.promptA, 4)}
+                <Text style={styles.plusSign}>+</Text>
+                {renderAppleRows(question.promptB ?? 0, 4)}
+              </View>
             )}
           </View>
 
@@ -248,7 +250,7 @@ export default function App() {
             <View style={styles.optionRow}>
               {question.options.map((opt) => (
                 <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>
-                  <Text style={styles.optionApple}>{apple.repeat(opt)}</Text>
+                  {renderAppleRows(opt, 4)}
                 </Pressable>
               ))}
             </View>
@@ -363,6 +365,22 @@ function randInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function renderAppleRows(count: number, perRow = 5) {
+  const rows: number[] = [];
+  for (let i = 0; i < count; i += perRow) rows.push(Math.min(perRow, count - i));
+  return (
+    <View style={styles.appleRows}>
+      {rows.map((n, idx) => (
+        <View key={`${count}-${idx}`} style={styles.appleRow}>
+          {Array.from({ length: n }).map((_, j) => (
+            <Text key={j} style={styles.bigApple}>{'🍎'}</Text>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: pastel.bg },
   screen: {
@@ -411,6 +429,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   promptText: { fontSize: 54, textAlign: 'center' },
+  additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18 },
+  plusSign: { fontSize: 54, fontWeight: '700', color: pastel.text, marginHorizontal: 8 },
+  appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
+  appleRow: { flexDirection: 'row', flexWrap: 'nowrap', justifyContent: 'center', gap: 14 },
+  bigApple: { fontSize: 54, lineHeight: 62 },
   dropZone: {
     width: TILE_SIZE,
     height: TILE_SIZE,
@@ -430,15 +453,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   imageOption: {
-    minWidth: 180,
-    minHeight: 130,
+    minWidth: 220,
+    minHeight: 170,
     borderRadius: 18,
     backgroundColor: '#F6FBFD',
     borderWidth: 2,
     borderColor: '#D7EAEE',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   optionApple: { fontSize: 42 },
   numberCard: {
