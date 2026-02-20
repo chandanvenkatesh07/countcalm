@@ -500,6 +500,14 @@ export default function App() {
 
             <View style={[styles.questionLayout, isTabletLandscape && styles.questionLayoutWide]}>
               <View style={[styles.questionPanel, isTabletLandscape && styles.questionPanelWide]}>
+                <View style={styles.equationBoard}>
+                  {question.mode === 'counting' ? (
+                    <Text style={styles.equationText}>Count these objects = ?</Text>
+                  ) : (
+                    <Text style={styles.equationText}>{question.promptA} + {question.promptB} = ?</Text>
+                  )}
+                </View>
+
                 <View style={styles.promptBox}>
                   {question.mode === 'counting' ? (
                     renderObjectRows(question.answer, objectTheme.asset)
@@ -524,10 +532,16 @@ export default function App() {
                 )}
 
                 {shouldUseDrag && (
-                  <View style={styles.dropZone}>
-                    <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
-                    <Text style={styles.dropText}>Drop answer here</Text>
-                  </View>
+                  <>
+                    <View style={styles.dropZone}>
+                      <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
+                      <Text style={styles.dropText}>Drop answer here</Text>
+                    </View>
+                    <View style={styles.dragHintRow}>
+                      <MaterialCommunityIcons name="gesture-swipe-up" size={20} color={tokens.subtle} />
+                      <Text style={styles.dragHintText}>Drag the number bag upward</Text>
+                    </View>
+                  </>
                 )}
               </View>
 
@@ -540,14 +554,15 @@ export default function App() {
                   </View>
                 ) : (
                   <View style={styles.optionRow}>
-                    {question.options.map((opt) => (
+                    {question.options.map((opt, idx) => (
                       <Animated.View
                         key={opt}
                         style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
                         {...(draggingNumber === opt ? panResponder.panHandlers : {})}
                       >
                         <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
-                          <LinearGradient colors={['#FFF6D9', '#FFD9B8', '#FFC69D']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
+                          <LinearGradient colors={bagColors(idx)} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
+                            <View style={styles.bagKnot} />
                             <View style={styles.numberInnerGlow} />
                             <Text style={styles.numberText}>{opt}</Text>
                           </LinearGradient>
@@ -678,6 +693,16 @@ function numberOptions(answer: number, count: number, min: number, max: number) 
 
 function randInt(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
+function bagColors(idx: number): [string, string, string] {
+  const palettes: [string, string, string][] = [
+    ['#FFECC8', '#FFD29A', '#FFB978'],
+    ['#E7F2FF', '#C5DFFF', '#9CC5FF'],
+    ['#FDE3F5', '#F9BFE8', '#EC97D6'],
+    ['#E4F9E8', '#B9EDC4', '#8EDFA3'],
+  ];
+  return palettes[idx % palettes.length];
+}
+
 function renderObjectRows(count: number, asset: any, perRow = 5) {
   const rows: number[] = [];
   for (let i = 0; i < count; i += perRow) rows.push(Math.min(perRow, count - i));
@@ -752,7 +777,9 @@ const styles = StyleSheet.create({
   levelLabel: { fontSize: 23, color: tokens.text, fontWeight: '800' },
   starPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF2C8', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
   starText: { fontSize: 18, fontWeight: '700', color: '#8C6500' },
-  promptBox: { backgroundColor: tokens.card, borderRadius: 28, paddingHorizontal: 26, paddingVertical: 18, minHeight: 124, justifyContent: 'center', borderWidth: 1, borderColor: tokens.border },
+  equationBoard: { width: '100%', backgroundColor: '#2C7F5E', borderRadius: 18, borderWidth: 3, borderColor: '#8B6D42', paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+  equationText: { fontSize: 40, fontWeight: '900', color: '#E8FFF2', textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
+  promptBox: { backgroundColor: '#BDEEFF', borderRadius: 28, paddingHorizontal: 26, paddingVertical: 18, minHeight: 124, justifyContent: 'center', borderWidth: 1, borderColor: '#99D6EB' },
   additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18 },
   plusSign: { fontSize: 56, fontWeight: '800', color: tokens.text, marginHorizontal: 8 },
   appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -761,11 +788,14 @@ const styles = StyleSheet.create({
   appleIcon3d: { width: 72, height: 72 },
   dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.drop, justifyContent: 'center', alignItems: 'center', gap: 8 },
   dropText: { fontSize: 20, color: tokens.subtle, fontWeight: '700', textAlign: 'center', paddingHorizontal: 10 },
+  dragHintRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -4, backgroundColor: '#EFF8FB', borderWidth: 1, borderColor: '#D5EAF1', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  dragHintText: { color: tokens.subtle, fontWeight: '700' },
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
   imageOption: { minWidth: 236, minHeight: 188, borderRadius: 22, backgroundColor: '#FDFEFE', borderWidth: 1, borderColor: tokens.border, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 },
-  numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#A97442', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
-  numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 1, borderColor: '#E7BFA2', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  numberInnerGlow: { position: 'absolute', top: 10, left: 12, right: 12, height: 26, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.45)' },
+  numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  bagKnot: { position: 'absolute', top: -2, width: 72, height: 22, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, backgroundColor: 'rgba(105,74,42,0.65)' },
+  numberInnerGlow: { position: 'absolute', top: 20, left: 12, right: 12, height: 26, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.45)' },
   fullCardPress: { flex: 1, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   numberText: { fontSize: 78, fontWeight: '900', color: '#264A5A', textShadowColor: 'rgba(255,255,255,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   feedbackPill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EEF7FA', borderWidth: 1, borderColor: '#D2E8EF', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: 920 },
