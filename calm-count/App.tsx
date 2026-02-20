@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import * as Speech from 'expo-speech';
 
 type Screen = 'home' | 'parent' | 'chapterIntro' | 'question';
 type Chapter = 'counting' | 'addition';
@@ -81,10 +82,12 @@ export default function App() {
   const [revealedAnswer, setRevealedAnswer] = useState<number | null>(null);
   const [sparkle, setSparkle] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  const [confettiKey, setConfettiKey] = useState(0);
 
   const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const cardLift = useRef(new Animated.Value(1)).current;
   const screenFade = useRef(new Animated.Value(0)).current;
+  const revealScale = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
     (async () => {
@@ -115,6 +118,7 @@ export default function App() {
       dragPos.setValue({ x: 0, y: 0 });
       setFeedback('You can do it!');
       setRevealedAnswer(null);
+      revealScale.setValue(0.6);
     }
   }, [screen, chapter, level, dragPos]);
 
@@ -134,6 +138,12 @@ export default function App() {
       }
     },
   }), [draggingNumber, question]);
+
+  function speakLine(line: string) {
+    if (!settings.voiceEnabled) return;
+    Speech.stop();
+    Speech.speak(line, { rate: 0.88, pitch: 1.05 });
+  }
 
   function startLearning() {
     setChapter(settings.skipCounting ? 'addition' : 'counting');
@@ -214,26 +224,40 @@ export default function App() {
   function handleLevelSuccess() {
     if (!question) return;
     const firstTry = !firstAttemptMissed;
-    if (question.mode === 'addition-image-choice') setRevealedAnswer(question.answer);
+    const successLine = chapter === 'counting'
+      ? `Yes! ${question.answer}. Great job!`
+      : `Yes! ${question.promptA} plus ${question.promptB} is ${question.answer}. Great job!`;
+
+    if (question.mode === 'addition-image-choice') {
+      setRevealedAnswer(question.answer);
+      revealScale.setValue(0.6);
+      Animated.sequence([
+        Animated.spring(revealScale, { toValue: 1.2, useNativeDriver: true, bounciness: 10 }),
+        Animated.spring(revealScale, { toValue: 1, useNativeDriver: true, bounciness: 6 }),
+        Animated.timing(revealScale, { toValue: 1.08, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(revealScale, { toValue: 1, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]).start();
+    }
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    speakLine(successLine);
     setSparkle(true);
-    setTimeout(() => setSparkle(false), 700);
-    setFeedback(
-      chapter === 'counting'
-        ? `Yes! ${question.answer} apples. Great job!`
-        : `Yes! ${question.promptA} plus ${question.promptB} is ${question.answer}. Great job!`
-    );
+    setConfettiKey((k) => k + 1);
+    setTimeout(() => setSparkle(false), 900);
+    setFeedback(successLine);
     setStars((s) => s + 1);
     Animated.sequence([
       Animated.spring(cardLift, { toValue: 1.08, useNativeDriver: true, bounciness: 8 }),
       Animated.spring(cardLift, { toValue: 1, useNativeDriver: true, bounciness: 6 }),
     ]).start();
-    setTimeout(() => advanceAfterSuccess(firstTry), 1050);
+    const waitMs = question.mode === 'addition-image-choice' ? 3000 : 1050;
+    setTimeout(() => advanceAfterSuccess(firstTry), waitMs);
   }
 
   function handleWrongAttempt() {
     if (!firstAttemptMissed) setFirstAttemptMissed(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    speakLine("Nice try. Let's try again.");
     setFeedback('Nice try. Let’s try again.');
     Animated.parallel([
       Animated.spring(dragPos, { toValue: { x: 0, y: 0 }, useNativeDriver: false, bounciness: 14 }),
@@ -356,9 +380,11 @@ export default function App() {
             {question.mode === 'addition-image-choice' && revealedAnswer !== null && (
               <View style={styles.answerRevealWrap}>
                 <Text style={styles.answerRevealText}>Great! That is</Text>
-                <LinearGradient colors={['#BFE8FF', '#8FD2FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.answerRevealBadge}>
-                  <Text style={styles.answerRevealNumber}>{revealedAnswer}</Text>
-                </LinearGradient>
+                <Animated.View style={{ transform: [{ scale: revealScale }] }}>
+                  <LinearGradient colors={['#BFE8FF', '#8FD2FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.answerRevealBadge}>
+                    <Text style={styles.answerRevealNumber}>{revealedAnswer}</Text>
+                  </LinearGradient>
+                </Animated.View>
               </View>
             )}
 
@@ -395,10 +421,35 @@ export default function App() {
             )}
 
             <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ 🎉 ✨</Text>}</View>
+            {sparkle && <ConfettiBurst key={confettiKey} />}
           </>
         )}
       </Animated.View>
     </SafeAreaView>
+  );
+}
+
+function ConfettiBurst() {
+  const y1 = useRef(new Animated.Value(0)).current;
+  const y2 = useRef(new Animated.Value(0)).current;
+  const y3 = useRef(new Animated.Value(0)).current;
+  const op = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(y1, { toValue: -140, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(y2, { toValue: -170, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(y3, { toValue: -120, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(op, { toValue: 0, duration: 900, useNativeDriver: true }),
+    ]).start();
+  }, [op, y1, y2, y3]);
+
+  return (
+    <View pointerEvents="none" style={styles.confettiLayer}>
+      <Animated.Text style={[styles.confettiPiece, { left: '40%', transform: [{ translateY: y1 }, { rotate: '25deg' }], opacity: op }]}>🎉</Animated.Text>
+      <Animated.Text style={[styles.confettiPiece, { left: '50%', transform: [{ translateY: y2 }, { rotate: '-15deg' }], opacity: op }]}>✨</Animated.Text>
+      <Animated.Text style={[styles.confettiPiece, { left: '60%', transform: [{ translateY: y3 }, { rotate: '10deg' }], opacity: op }]}>⭐</Animated.Text>
+    </View>
   );
 }
 
@@ -568,6 +619,8 @@ const styles = StyleSheet.create({
   feedbackPill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EEF7FA', borderWidth: 1, borderColor: '#D2E8EF', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: 920 },
   feedback: { fontSize: 20, color: '#2A6656', textAlign: 'center' },
   sparkles: { fontSize: 20, marginLeft: 6 },
+  confettiLayer: { position: 'absolute', left: 0, right: 0, bottom: 120, alignItems: 'center', justifyContent: 'center' },
+  confettiPiece: { position: 'absolute', fontSize: 34 },
   answerRevealWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: -4, marginBottom: 4 },
   answerRevealText: { fontSize: 24, fontWeight: '700', color: tokens.text },
   answerRevealBadge: { width: 72, height: 72, borderRadius: 36, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#7EC0E7' },
