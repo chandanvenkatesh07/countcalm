@@ -13,6 +13,7 @@ import {
   Text,
   View,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -102,6 +103,9 @@ export default function App() {
   const screenFade = useRef(new Animated.Value(0)).current;
   const revealScale = useRef(new Animated.Value(0.6)).current;
   const webAudioCtxRef = useRef<any>(null);
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTabletLandscape = isLandscape && width >= 1000;
 
   useEffect(() => {
     (async () => {
@@ -411,7 +415,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar style="dark" />
-      <Animated.View style={[styles.screen, { opacity: screenFade }]}>
+      <Animated.View style={[styles.screen, isTabletLandscape && styles.screenWide, { opacity: screenFade }]}>
         <View style={styles.soundToolsRow}>
           <Pressable style={styles.miniBtn} onPress={repeatInstructions}>
             <MaterialCommunityIcons name="bullhorn-outline" size={18} color="#12404A" />
@@ -494,62 +498,68 @@ export default function App() {
               <View style={styles.starPill}><MaterialCommunityIcons name="star" size={18} color="#B58400" /><Text style={styles.starText}>{stars}</Text></View>
             </View>
 
-            <View style={styles.promptBox}>
-              {question.mode === 'counting' ? (
-                renderObjectRows(question.answer, objectTheme.asset)
-              ) : (
-                <View style={styles.additionPromptRow}>
-                  {renderObjectRows(question.promptA, objectTheme.asset, 4)}
-                  <Text style={styles.plusSign}>+</Text>
-                  {renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4)}
+            <View style={[styles.questionLayout, isTabletLandscape && styles.questionLayoutWide]}>
+              <View style={[styles.questionPanel, isTabletLandscape && styles.questionPanelWide]}>
+                <View style={styles.promptBox}>
+                  {question.mode === 'counting' ? (
+                    renderObjectRows(question.answer, objectTheme.asset)
+                  ) : (
+                    <View style={styles.additionPromptRow}>
+                      {renderObjectRows(question.promptA, objectTheme.asset, 4)}
+                      <Text style={styles.plusSign}>+</Text>
+                      {renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4)}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
 
-            {question.mode === 'addition-image-choice' && revealedAnswer !== null && (
-              <View style={styles.answerRevealWrap}>
-                <Text style={styles.answerRevealText}>Great! That is</Text>
-                <Animated.View style={{ transform: [{ scale: revealScale }] }}>
-                  <LinearGradient colors={['#BFE8FF', '#8FD2FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.answerRevealBadge}>
-                    <Text style={styles.answerRevealNumber}>{revealedAnswer}</Text>
-                  </LinearGradient>
-                </Animated.View>
-              </View>
-            )}
-
-            {shouldUseDrag && (
-              <View style={styles.dropZone}>
-                <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
-                <Text style={styles.dropText}>Drop answer here</Text>
-              </View>
-            )}
-
-            {question.mode === 'addition-image-choice' ? (
-              <View style={styles.optionRow}>
-                {question.options.map((opt) => (
-                  <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>{renderObjectRows(opt, objectTheme.asset, 4)}</Pressable>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.optionRow}>
-                {question.options.map((opt) => (
-                  <Animated.View
-                    key={opt}
-                    style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
-                    {...(draggingNumber === opt ? panResponder.panHandlers : {})}
-                  >
-                    <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
-                      <LinearGradient colors={['#FFF6D9', '#FFD9B8', '#FFC69D']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
-                        <View style={styles.numberInnerGlow} />
-                        <Text style={styles.numberText}>{opt}</Text>
+                {question.mode === 'addition-image-choice' && revealedAnswer !== null && (
+                  <View style={styles.answerRevealWrap}>
+                    <Text style={styles.answerRevealText}>Great! That is</Text>
+                    <Animated.View style={{ transform: [{ scale: revealScale }] }}>
+                      <LinearGradient colors={['#BFE8FF', '#8FD2FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.answerRevealBadge}>
+                        <Text style={styles.answerRevealNumber}>{revealedAnswer}</Text>
                       </LinearGradient>
-                    </Pressable>
-                  </Animated.View>
-                ))}
-              </View>
-            )}
+                    </Animated.View>
+                  </View>
+                )}
 
-            <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ 🎉 ✨</Text>}</View>
+                {shouldUseDrag && (
+                  <View style={styles.dropZone}>
+                    <MaterialCommunityIcons name="tray-arrow-down" size={26} color={tokens.subtle} />
+                    <Text style={styles.dropText}>Drop answer here</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={[styles.questionPanel, isTabletLandscape && styles.questionPanelWide]}>
+                {question.mode === 'addition-image-choice' ? (
+                  <View style={styles.optionRow}>
+                    {question.options.map((opt) => (
+                      <Pressable key={opt} style={styles.imageOption} onPress={() => handleImageChoice(opt)}>{renderObjectRows(opt, objectTheme.asset, 4)}</Pressable>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.optionRow}>
+                    {question.options.map((opt) => (
+                      <Animated.View
+                        key={opt}
+                        style={[styles.numberCardWrap, draggingNumber === opt ? dragPos.getLayout() : undefined, draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined]}
+                        {...(draggingNumber === opt ? panResponder.panHandlers : {})}
+                      >
+                        <Pressable style={styles.fullCardPress} onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}>
+                          <LinearGradient colors={['#FFF6D9', '#FFD9B8', '#FFC69D']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.numberCard}>
+                            <View style={styles.numberInnerGlow} />
+                            <Text style={styles.numberText}>{opt}</Text>
+                          </LinearGradient>
+                        </Pressable>
+                      </Animated.View>
+                    ))}
+                  </View>
+                )}
+
+                <View style={styles.feedbackPill}><MaterialCommunityIcons name="message-text-outline" size={20} color={tokens.subtle} /><Text style={styles.feedback}>{feedback}</Text>{sparkle && <Text style={styles.sparkles}> ✨ ⭐ 🎉 ✨</Text>}</View>
+              </View>
+            </View>
             {sparkle && <ConfettiBurst key={confettiKey} />}
           </>
         )}
@@ -675,7 +685,11 @@ function renderObjectRows(count: number, asset: any, perRow = 5) {
     <View style={styles.appleRows}>
       {rows.map((n, idx) => (
         <View key={`${count}-${idx}`} style={styles.appleRow}>
-          {Array.from({ length: n }).map((_, j) => <Image key={j} source={asset} style={styles.appleIcon3d} resizeMode="contain" />)}
+          {Array.from({ length: n }).map((_, j) => (
+            <View key={j} style={styles.objectTile}>
+              <Image source={asset} style={styles.appleIcon3d} resizeMode="contain" />
+            </View>
+          ))}
         </View>
       ))}
     </View>
@@ -710,6 +724,7 @@ function getMasteryLabels(levelStats: Record<string, LevelStat>) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: tokens.bg },
   screen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 },
+  screenWide: { paddingHorizontal: 36, paddingVertical: 18 },
   introOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(247,245,239,0.96)', zIndex: 50, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 },
   introTitle: { fontSize: 42, fontWeight: '900', color: tokens.text, textAlign: 'center' },
   introText: { fontSize: 20, color: tokens.subtle, textAlign: 'center', maxWidth: 760, lineHeight: 30 },
@@ -729,7 +744,11 @@ const styles = StyleSheet.create({
   statsLine: { fontSize: 17, color: tokens.subtle, lineHeight: 25 },
   resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E6B6B6', backgroundColor: '#FFEFEF' },
   resetText: { color: '#7A2D2D', fontWeight: '700' },
-  topBar: { width: '100%', maxWidth: 920, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  topBar: { width: '100%', maxWidth: 1180, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  questionLayout: { width: '100%', maxWidth: 1180, gap: 16 },
+  questionLayoutWide: { flexDirection: 'row', alignItems: 'stretch' },
+  questionPanel: { backgroundColor: '#F5FBFD', borderRadius: 22, borderWidth: 1, borderColor: '#DDEFF5', padding: 14, gap: 14 },
+  questionPanelWide: { flex: 1 },
   levelLabel: { fontSize: 23, color: tokens.text, fontWeight: '800' },
   starPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF2C8', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
   starText: { fontSize: 18, fontWeight: '700', color: '#8C6500' },
@@ -738,7 +757,8 @@ const styles = StyleSheet.create({
   plusSign: { fontSize: 56, fontWeight: '800', color: tokens.text, marginHorizontal: 8 },
   appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
   appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
-  appleIcon3d: { width: 66, height: 66 },
+  objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+  appleIcon3d: { width: 72, height: 72 },
   dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.drop, justifyContent: 'center', alignItems: 'center', gap: 8 },
   dropText: { fontSize: 20, color: tokens.subtle, fontWeight: '700', textAlign: 'center', paddingHorizontal: 10 },
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
