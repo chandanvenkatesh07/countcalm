@@ -12,6 +12,7 @@ import {
   Switch,
   Text,
   View,
+  Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -145,6 +146,31 @@ export default function App() {
     Speech.speak(line, { rate: 0.88, pitch: 1.05 });
   }
 
+  function playTone(kind: 'success' | 'error') {
+    if (!settings.soundEnabled) return;
+    if (Platform.OS !== 'web') return;
+    try {
+      const AudioCtx = (globalThis as any).AudioContext || (globalThis as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = kind === 'success' ? 880 : 220;
+      gain.gain.value = 0.0001;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const now = ctx.currentTime;
+      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'success' ? 0.18 : 0.24));
+      osc.start(now);
+      osc.stop(now + (kind === 'success' ? 0.2 : 0.26));
+      setTimeout(() => ctx.close(), 300);
+    } catch {
+      // no-op if browser blocks audio context
+    }
+  }
+
   function startLearning() {
     setChapter(settings.skipCounting ? 'addition' : 'counting');
     setLevel(1);
@@ -240,6 +266,7 @@ export default function App() {
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    playTone('success');
     speakLine(successLine);
     setSparkle(true);
     setConfettiKey((k) => k + 1);
@@ -257,6 +284,7 @@ export default function App() {
   function handleWrongAttempt() {
     if (!firstAttemptMissed) setFirstAttemptMissed(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    playTone('error');
     speakLine("Nice try. Let's try again.");
     setFeedback('Nice try. Let’s try again.');
     Animated.parallel([
