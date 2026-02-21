@@ -22,7 +22,7 @@ import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 
 type Screen = 'home' | 'parent' | 'chapterIntro' | 'question';
-type Chapter = 'counting' | 'addition';
+type Chapter = 'counting' | 'additionNumbers' | 'additionPictures' | 'subtraction';
 
 type Settings = {
   skipCounting: boolean;
@@ -269,17 +269,20 @@ export default function App() {
   }
 
   function getInstructionLine() {
-    if (screen === 'home') return 'Welcome to Calm Count. Tap Start Learning. Hold Parent Zone to open settings.';
+    if (screen === 'home') return 'Welcome to Calm Count. Choose a learning mode. Hold Parent Zone to open settings.';
     if (screen === 'parent') return 'Parent Zone. Toggle settings and use Test Chime to confirm sound.';
     if (screen === 'chapterIntro') {
-      return chapter === 'counting'
-        ? 'Counting chapter. Drag the correct number card into the drop zone.'
-        : 'Addition chapter. Drag the correct number card into the drop zone.';
+      if (chapter === 'counting') return 'Counting chapter. Drag the correct number card into the drop zone.';
+      if (chapter === 'additionPictures') return 'Addition pictures chapter. Tap the picture option with the correct total.';
+      if (chapter === 'subtraction') return 'Subtraction chapter. Drag the correct number card into the drop zone.';
+      return 'Addition numbers chapter. Drag the correct number card into the drop zone.';
     }
     if (screen === 'question' && question) {
       if (question.mode === 'counting') return 'Count the objects and drag the matching number card into the drop zone.';
-      if (question.mode === 'addition-image-choice') return 'Add both groups, then tap the correct picture option.';
-      return 'Add both groups and drag the correct number card into the drop zone.';
+      if (question.mode === 'addition-image-choice') return 'Choose the picture option with the correct total.';
+      return chapter === 'subtraction'
+        ? 'Subtract the groups and drag the correct number card into the drop zone.'
+        : 'Add both groups and drag the correct number card into the drop zone.';
     }
     return 'Let’s keep learning.';
   }
@@ -290,7 +293,9 @@ export default function App() {
     if (screen === 'home') played = playVoiceClip(VOICE_CLIPS.home);
     else if (screen === 'parent') played = playVoiceClip(VOICE_CLIPS.parent);
     else if (screen === 'chapterIntro') {
-      played = playVoiceClip(chapter === 'counting' ? VOICE_CLIPS.counting : VOICE_CLIPS.additionDrag);
+      if (chapter === 'counting') played = playVoiceClip(VOICE_CLIPS.counting);
+      else if (chapter === 'additionPictures') played = playVoiceClip(VOICE_CLIPS.additionImage);
+      else played = playVoiceClip(VOICE_CLIPS.additionDrag);
     } else if (screen === 'question' && question) {
       if (question.mode === 'counting') played = playVoiceClip(VOICE_CLIPS.counting);
       else if (question.mode === 'addition-image-choice') played = playVoiceClip(VOICE_CLIPS.additionImage);
@@ -300,14 +305,19 @@ export default function App() {
     if (screen === 'question') setFeedback(line);
   }
 
-  function startLearning() {
-    setChapter(settings.skipCounting ? 'addition' : 'counting');
+  function startChapter(ch: Chapter) {
+    setChapter(ch);
     setLevel(1);
     setScreen('chapterIntro');
   }
 
+  function startLearning() {
+    startChapter(settings.skipCounting ? 'additionNumbers' : 'counting');
+  }
+
   function levelKey(ch: Chapter, lv: number) {
-    return `${ch === 'counting' ? 'C' : 'A'}${lv}`;
+    const p = ch === 'counting' ? 'C' : ch === 'additionNumbers' ? 'AN' : ch === 'additionPictures' ? 'AP' : 'S';
+    return `${p}${lv}`;
   }
 
   function updateStats(clearedOnFirstTry: boolean) {
@@ -360,7 +370,7 @@ export default function App() {
         setLevel((l) => l + 1);
         setTimeout(() => setScreen('question'), 650);
       } else {
-        setChapter('addition');
+        setChapter('additionNumbers');
         setLevel(1);
         setScreen('chapterIntro');
       }
@@ -381,6 +391,8 @@ export default function App() {
     const firstTry = !firstAttemptMissed;
     const successLine = chapter === 'counting'
       ? `Yes! ${question.answer}. Great job!`
+      : chapter === 'subtraction'
+      ? `Yes! ${question.promptA} minus ${question.promptB} is ${question.answer}. Great job!`
       : `Yes! ${question.promptA} plus ${question.promptB} is ${question.answer}. Great job!`;
 
     if (question.mode === 'addition-image-choice') {
@@ -474,7 +486,12 @@ export default function App() {
           <>
             <Text style={styles.title}>Calm Count</Text>
             <Text style={styles.subtitle}>Beautiful, calm math learning for ages 4–6</Text>
-            <PrimaryButton title="Start Learning" icon="play-circle-outline" onPress={startLearning} />
+            <View style={styles.modeGrid}>
+              <PrimaryButton title="Counting" icon="numeric" onPress={() => startChapter('counting')} />
+              <PrimaryButton title="Addition (Numbers)" icon="plus-circle-outline" onPress={() => startChapter('additionNumbers')} />
+              <PrimaryButton title="Addition (Pictures)" icon="shape-outline" onPress={() => startChapter('additionPictures')} />
+              <PrimaryButton title="Subtraction" icon="minus-circle-outline" onPress={() => startChapter('subtraction')} />
+            </View>
             <Pressable style={styles.parentBtn} onLongPress={() => setScreen('parent')} delayLongPress={600}>
               <MaterialCommunityIcons name="account-cog-outline" size={22} color={tokens.subtle} />
               <Text style={styles.parentText}>Parent Zone (hold)</Text>
@@ -516,12 +533,8 @@ export default function App() {
 
         {screen === 'chapterIntro' && (
           <>
-            <Text style={styles.title}>{chapter === 'counting' ? 'Counting Chapter' : 'Addition Chapter'}</Text>
-            <Text style={styles.subtitle}>
-              {chapter === 'counting'
-                ? 'Drag the right number card into the square.'
-                : 'Drag the right number card into the square.'}
-            </Text>
+            <Text style={styles.title}>{chapter === 'counting' ? 'Counting Chapter' : chapter === 'additionPictures' ? 'Addition Pictures Chapter' : chapter === 'subtraction' ? 'Subtraction Chapter' : 'Addition Numbers Chapter'}</Text>
+            <Text style={styles.subtitle}>Drag the right answer into the square.</Text>
             <PrimaryButton title={`Start Level ${level}`} icon="rocket-launch-outline" onPress={() => setScreen('question')} />
           </>
         )}
@@ -529,7 +542,7 @@ export default function App() {
         {screen === 'question' && question && (
           <>
             <View style={styles.topBar}>
-              <Text style={styles.levelLabel}>{chapter === 'counting' ? `Counting ${level}/5` : `Addition ${level}/10`}</Text>
+              <Text style={styles.levelLabel}>{chapter === 'counting' ? `Counting ${level}/5` : chapter === 'additionPictures' ? `Addition Pictures ${level}/10` : chapter === 'subtraction' ? `Subtraction ${level}/10` : `Addition Numbers ${level}/10`}</Text>
               <View style={styles.starPill}><MaterialCommunityIcons name="star" size={18} color="#B58400" /><Text style={styles.starText}>{stars}</Text></View>
             </View>
 
@@ -538,7 +551,7 @@ export default function App() {
                 <View style={styles.equationBoard}>
                   <View style={styles.equationAlignRow}>
                     <View style={styles.promptGroup}><Text style={styles.equationText}>{question.promptA}</Text></View>
-                    <View style={styles.symbolSlot}><Text style={styles.equationText}>+</Text></View>
+                    <View style={styles.symbolSlot}><Text style={styles.equationText}>{chapter === 'subtraction' ? '−' : '+'}</Text></View>
                     <View style={styles.promptGroup}><Text style={styles.equationText}>{question.promptB}</Text></View>
                     <View style={styles.symbolSlot}><Text style={styles.equationText}>=</Text></View>
                     <View style={styles.inlineDropZoneGhost}><Text style={styles.equationText}>?</Text></View>
@@ -552,28 +565,32 @@ export default function App() {
                 ) : (
                   <View style={styles.additionPromptRow}>
                     <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 92)}</View>
-                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>+</Text></View>
+                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>{chapter === 'subtraction' ? '−' : '+'}</Text></View>
                     <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 92)}</View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
-                    <View
-                      ref={(r) => { dropZoneRef.current = r; }}
-                      onLayout={() => {
-                        dropZoneRef.current?.measureInWindow((x, y, width, height) => {
-                          setDropZoneRect({ x, y, width, height });
-                        });
-                      }}
-                      style={styles.inlineDropZone}
-                    >
-                      {snappedValue == null ? (
-                        <MaterialCommunityIcons name="help" size={30} color={tokens.subtle} />
-                      ) : (
-                        <LinearGradient colors={['#DDF8E1', '#ACEBB7', '#79DB8B']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.snapCard}>
-                          <View style={styles.bagKnot} />
-                          <View style={styles.numberInnerGlow} />
-                          <Text selectable={false} style={styles.snapCardText}>{snappedValue}</Text>
-                        </LinearGradient>
-                      )}
-                    </View>
+                    {question.mode === 'addition-image-choice' ? (
+                      <View style={styles.inlineDropZone}><MaterialCommunityIcons name="help" size={30} color={tokens.subtle} /></View>
+                    ) : (
+                      <View
+                        ref={(r) => { dropZoneRef.current = r; }}
+                        onLayout={() => {
+                          dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                            setDropZoneRect({ x, y, width, height });
+                          });
+                        }}
+                        style={styles.inlineDropZone}
+                      >
+                        {snappedValue == null ? (
+                          <MaterialCommunityIcons name="help" size={30} color={tokens.subtle} />
+                        ) : (
+                          <LinearGradient colors={['#DDF8E1', '#ACEBB7', '#79DB8B']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.snapCard}>
+                            <View style={styles.bagKnot} />
+                            <View style={styles.numberInnerGlow} />
+                            <Text selectable={false} style={styles.snapCardText}>{snappedValue}</Text>
+                          </LinearGradient>
+                        )}
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
@@ -767,6 +784,19 @@ function buildQuestion(chapter: Chapter, level: number): RoundQuestion {
     const answer = randInt(cfg.min, cfg.max);
     return { promptA: answer, answer, options: numberOptions(answer, cfg.optionCount, cfg.min, cfg.max), mode: 'counting' };
   }
+
+  if (chapter === 'additionPictures') {
+    const max = Math.min(10, Math.max(4, level + 1));
+    const a = randInt(1, max - 1); const b = randInt(1, max - a); const answer = a + b;
+    return { promptA: a, promptB: b, answer, options: numberOptions(answer, level < 10 ? 3 : 4, 1, 10), mode: 'addition-image-choice' };
+  }
+
+  if (chapter === 'subtraction') {
+    const max = Math.min(10, Math.max(4, level + 1));
+    const a = randInt(2, max); const b = randInt(1, a - 1); const answer = a - b;
+    return { promptA: a, promptB: b, answer, options: numberOptions(answer, level < 10 ? 3 : 4, 0, 9), mode: 'addition-drag-number' };
+  }
+
   const max = Math.min(10, Math.max(4, level + 1));
   const a = randInt(1, max - 1); const b = randInt(1, max - a); const answer = a + b;
   return { promptA: a, promptB: b, answer, options: numberOptions(answer, level < 10 ? 3 : 4, 1, 10), mode: 'addition-drag-number' };
@@ -845,6 +875,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 20, color: tokens.subtle, textAlign: 'center', maxWidth: 760, lineHeight: 29 },
   primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: tokens.accent, borderColor: '#A8D8DA', borderWidth: 1, minWidth: 260, paddingVertical: 16, paddingHorizontal: 22, borderRadius: 20 },
   primaryText: { fontSize: 24, fontWeight: '700', color: '#12404A' },
+  modeGrid: { width: '100%', maxWidth: 920, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
   parentBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#ECE8DC', borderRadius: 14 },
   parentText: { fontSize: 18, color: tokens.subtle },
   settingRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', maxWidth: 780, alignItems: 'center', backgroundColor: tokens.card, padding: 18, borderRadius: 16, borderWidth: 1, borderColor: tokens.border },
