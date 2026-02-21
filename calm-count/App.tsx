@@ -551,11 +551,29 @@ export default function App() {
                   renderObjectRows(question.answer, objectTheme.asset, 5, 150)
                 ) : (
                   <View style={styles.additionPromptRow}>
-                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 72)}</View>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 92)}</View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>+</Text></View>
-                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 72)}</View>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 92)}</View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
-                    <View style={styles.inlineDropZone}><MaterialCommunityIcons name="help" size={30} color={tokens.subtle} /></View>
+                    <View
+                      ref={(r) => { dropZoneRef.current = r; }}
+                      onLayout={() => {
+                        dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                          setDropZoneRect({ x, y, width, height });
+                        });
+                      }}
+                      style={styles.inlineDropZone}
+                    >
+                      {snappedValue == null ? (
+                        <MaterialCommunityIcons name="help" size={30} color={tokens.subtle} />
+                      ) : (
+                        <LinearGradient colors={['#DDF8E1', '#ACEBB7', '#79DB8B']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.snapCard}>
+                          <View style={styles.bagKnot} />
+                          <View style={styles.numberInnerGlow} />
+                          <Text selectable={false} style={styles.snapCardText}>{snappedValue}</Text>
+                        </LinearGradient>
+                      )}
+                    </View>
                   </View>
                 )}
               </View>
@@ -571,7 +589,7 @@ export default function App() {
                 </View>
               )}
 
-              {shouldUseDrag && (
+              {question.mode === 'counting' && (
                 <View style={styles.dropZoneWrap}>
                   <View
                     ref={(r) => { dropZoneRef.current = r; }}
@@ -849,8 +867,8 @@ const styles = StyleSheet.create({
   promptGroup: { minWidth: 200, alignItems: 'center', justifyContent: 'center' },
   symbolSlot: { width: 70, alignItems: 'center', justifyContent: 'center' },
   plusSign: { fontSize: 64, fontWeight: '800', color: tokens.text, lineHeight: 66 },
-  inlineDropZone: { width: 150, height: 150, borderRadius: 18, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: '#EAF7FC', alignItems: 'center', justifyContent: 'center' },
-  inlineDropZoneGhost: { width: 150, height: 1, opacity: 0 },
+  inlineDropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 18, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: '#EAF7FC', alignItems: 'center', justifyContent: 'center' },
+  inlineDropZoneGhost: { width: TILE_SIZE, height: 1, opacity: 0 },
   appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
   appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
