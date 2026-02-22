@@ -828,7 +828,13 @@ function renderObjectRows(count: number, asset: any, perRow = 5, iconSize = 72) 
       {rows.map((n, idx) => (
         <View key={`${count}-${idx}`} style={styles.appleRow}>
           {Array.from({ length: n }).map((_, j) => (
-            <Image key={j} source={asset} style={[styles.appleIcon3d, { width: iconSize, height: iconSize }]} resizeMode="contain" />
+            <View key={j} style={styles.objectTile}>
+              <Image
+                source={asset}
+                style={[styles.appleIcon3d, { width: iconSize, height: iconSize }]}
+                resizeMode="contain"
+              />
+            </View>
           ))}
         </View>
       ))}
