@@ -483,20 +483,28 @@ export default function App() {
           </View>
         )}
         {screen === 'home' && (
-          <>
-            <Text style={styles.title}>Calm Count</Text>
-            <Text style={styles.subtitle}>Beautiful, calm math learning for ages 4–6</Text>
-            <View style={styles.modeGrid}>
-              <PrimaryButton title="Counting" icon="numeric" onPress={() => startChapter('counting')} />
-              <PrimaryButton title="Addition (Numbers)" icon="plus-circle-outline" onPress={() => startChapter('additionNumbers')} />
-              <PrimaryButton title="Addition (Pictures)" icon="shape-outline" onPress={() => startChapter('additionPictures')} />
-              <PrimaryButton title="Subtraction" icon="minus-circle-outline" onPress={() => startChapter('subtraction')} />
+          <View style={styles.homeWrap}>
+            <View style={styles.sceneSun} />
+            <View style={[styles.sceneCloud, styles.sceneCloudA]} />
+            <View style={[styles.sceneCloud, styles.sceneCloudB]} />
+            <View style={[styles.sceneCloud, styles.sceneCloudC]} />
+            <View style={styles.sceneHills} />
+
+            <Text style={styles.homeTitle}>Calm Count</Text>
+            <Text style={styles.homeSubtitle}>Beautiful, calm math learning for ages 4–6</Text>
+
+            <View style={styles.homeModeGrid}>
+              <HomeModeCard title="Counting" icon="numeric" onPress={() => startChapter('counting')} />
+              <HomeModeCard title="Addition (Numbers)" icon="plus-circle-outline" onPress={() => startChapter('additionNumbers')} />
+              <HomeModeCard title="Addition (Pictures)" icon="shape-outline" onPress={() => startChapter('additionPictures')} />
+              <HomeModeCard title="Subtraction" icon="minus-circle-outline" onPress={() => startChapter('subtraction')} />
             </View>
-            <Pressable style={styles.parentBtn} onLongPress={() => setScreen('parent')} delayLongPress={600}>
-              <MaterialCommunityIcons name="account-cog-outline" size={22} color={tokens.subtle} />
-              <Text style={styles.parentText}>Parent Zone (hold)</Text>
+
+            <Pressable style={styles.homeParentBtn} onLongPress={() => setScreen('parent')} delayLongPress={600}>
+              <MaterialCommunityIcons name="account-cog-outline" size={20} color="#587587" />
+              <Text style={styles.homeParentText}>Parent Zone (hold)</Text>
             </Pressable>
-          </>
+          </View>
         )}
 
         {screen === 'parent' && (
@@ -819,6 +827,15 @@ function PrimaryButton({ title, icon, onPress }: { title: string; icon: keyof ty
   return <Pressable style={styles.primaryButton} onPress={onPress}><MaterialCommunityIcons name={icon} size={22} color="#12404A" /><Text style={styles.primaryText}>{title}</Text></Pressable>;
 }
 
+function HomeModeCard({ title, icon, onPress }: { title: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; onPress: () => void }) {
+  return (
+    <Pressable style={styles.homeModeCard} onPress={onPress}>
+      <MaterialCommunityIcons name={icon} size={22} color="#154A66" />
+      <Text style={styles.homeModeText}>{title}</Text>
+    </Pressable>
+  );
+}
+
 function SettingRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return <View style={styles.settingRow}><Text style={styles.settingLabel}>{label}</Text><Switch value={value} onValueChange={onChange} /></View>;
 }
@@ -946,6 +963,66 @@ const styles = StyleSheet.create({
   miniBtnText: { color: '#12404A', fontWeight: '700' },
   title: { fontSize: 44, fontWeight: '800', color: tokens.text, textAlign: 'center' },
   subtitle: { fontSize: 20, color: tokens.subtle, textAlign: 'center', maxWidth: 760, lineHeight: 29 },
+  homeWrap: {
+    width: '100%',
+    maxWidth: 1060,
+    minHeight: 560,
+    borderRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 34,
+    paddingBottom: 34,
+    alignItems: 'center',
+    overflow: 'hidden',
+    backgroundColor: '#BFE8FF',
+    borderWidth: 1,
+    borderColor: '#98D2F2',
+  },
+  sceneSun: {
+    position: 'absolute',
+    top: 24,
+    right: 42,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: '#FFD93D',
+    shadowColor: '#FFD93D',
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  sceneCloud: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 999 },
+  sceneCloudA: { top: 52, left: 40, width: 130, height: 44 },
+  sceneCloudB: { top: 122, right: 140, width: 96, height: 34 },
+  sceneCloudC: { top: 174, left: 180, width: 112, height: 36 },
+  sceneHills: {
+    position: 'absolute',
+    left: -40,
+    right: -40,
+    bottom: -65,
+    height: 170,
+    borderTopLeftRadius: 220,
+    borderTopRightRadius: 220,
+    backgroundColor: '#93E06F',
+  },
+  homeTitle: { fontSize: 64, fontWeight: '900', color: '#1D4E72', textAlign: 'center', marginTop: 12 },
+  homeSubtitle: { fontSize: 18, color: '#3D6A84', textAlign: 'center', marginTop: 8, marginBottom: 24 },
+  homeModeGrid: { width: '100%', maxWidth: 920, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 },
+  homeModeCard: {
+    minWidth: 240,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    backgroundColor: '#A7DBE1',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#88C9D1',
+  },
+  homeModeText: { fontSize: 22, fontWeight: '800', color: '#13445E' },
+  homeParentBtn: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#EAE6DA', borderRadius: 14 },
+  homeParentText: { fontSize: 17, color: '#587587' },
   primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: tokens.accent, borderColor: '#A8D8DA', borderWidth: 1, minWidth: 260, paddingVertical: 16, paddingHorizontal: 22, borderRadius: 20 },
   primaryText: { fontSize: 24, fontWeight: '700', color: '#12404A' },
   modeGrid: { width: '100%', maxWidth: 920, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
