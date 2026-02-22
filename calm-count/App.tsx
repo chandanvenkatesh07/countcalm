@@ -362,7 +362,7 @@ export default function App() {
   function startChapter(ch: Chapter) {
     setChapter(ch);
     setLevel(1);
-    setScreen('chapterIntro');
+    setScreen('question');
   }
 
   function startLearning() {
@@ -426,7 +426,7 @@ export default function App() {
       } else {
         setChapter('additionNumbers');
         setLevel(1);
-        setScreen('chapterIntro');
+        setScreen('question');
       }
       return;
     }
