@@ -136,6 +136,7 @@ export default function App() {
   const [dropZoneRect, setDropZoneRect] = useState<Rect | null>(null);
   const [snappedValue, setSnappedValue] = useState<number | null>(null);
   const [objectTheme, setObjectTheme] = useState<ObjectTheme>(COMMON_OBJECTS[0]);
+  const [subtractionResolved, setSubtractionResolved] = useState(false);
 
   const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const cardLift = useRef(new Animated.Value(1)).current;
@@ -149,6 +150,7 @@ export default function App() {
   const sym1 = useRef(new Animated.Value(0)).current;
   const sym2 = useRef(new Animated.Value(0)).current;
   const sym3 = useRef(new Animated.Value(0)).current;
+  const subtractionSweep = useRef(new Animated.Value(0)).current;
   const dropZoneRef = useRef<View | null>(null);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -233,6 +235,8 @@ export default function App() {
       setRevealedAnswer(null);
       setOptionFlash(null);
       setSnappedValue(null);
+      setSubtractionResolved(false);
+      subtractionSweep.setValue(0);
       revealScale.setValue(0.6);
       setTimeout(() => {
         dropZoneRef.current?.measureInWindow((x, y, width, height) => {
@@ -497,6 +501,17 @@ export default function App() {
       ]).start();
     }
 
+    if (chapter === 'subtraction' && question.mode === 'addition-drag-number') {
+      setSubtractionResolved(true);
+      subtractionSweep.setValue(0);
+      Animated.sequence([
+        Animated.timing(subtractionSweep, { toValue: 56, duration: 220, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(subtractionSweep, { toValue: -56, duration: 220, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(subtractionSweep, { toValue: 30, duration: 180, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(subtractionSweep, { toValue: 0, duration: 180, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]).start();
+    }
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     playTone('success');
     if (!playVoiceClip(VOICE_CLIPS.success)) speakLine(successLine);
@@ -745,10 +760,38 @@ export default function App() {
                       </View>
                     </View>
                   </View>
+                ) : chapter === 'subtraction' ? (
+                  <View style={styles.additionPromptRow}>
+                    <View style={styles.promptGroup}>{renderObjectRows(subtractionResolved ? question.answer : question.promptA, objectTheme, 4, 92)}</View>
+                    <View style={styles.symbolSlot}>
+                      <Animated.Text style={[styles.plusSign, { transform: [{ translateX: subtractionSweep }] }]}>−</Animated.Text>
+                    </View>
+                    <View style={styles.promptGroup}>{renderObjectRows(subtractionResolved ? 0 : (question.promptB ?? 0), objectTheme, 4, 92)}</View>
+                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
+                    <View
+                      ref={(r) => { dropZoneRef.current = r; }}
+                      onLayout={() => {
+                        dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                          setDropZoneRect({ x, y, width, height });
+                        });
+                      }}
+                      style={styles.inlineDropZone}
+                    >
+                      {snappedValue == null ? (
+                        <MaterialCommunityIcons name="help" size={30} color={tokens.subtle} />
+                      ) : (
+                        <LinearGradient colors={['#DDF8E1', '#ACEBB7', '#79DB8B']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.snapCard}>
+                          <View style={styles.bagKnot} />
+                          <View style={styles.numberInnerGlow} />
+                          <Text selectable={false} style={styles.snapCardText}>{snappedValue}</Text>
+                        </LinearGradient>
+                      )}
+                    </View>
+                  </View>
                 ) : (
                   <View style={styles.additionPromptRow}>
                     <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme, 4, 92)}</View>
-                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>{chapter === 'subtraction' ? '−' : '+'}</Text></View>
+                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>+</Text></View>
                     <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme, 4, 92)}</View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
                     <View
