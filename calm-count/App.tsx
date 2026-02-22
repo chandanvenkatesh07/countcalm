@@ -675,15 +675,15 @@ export default function App() {
                   <View style={styles.additionAdventureRow}>
                     <View style={styles.eqSlotWide}>
                       <View style={styles.eqCol}>
-                        {renderBallRows(question.promptA, 'blue', 4, 46)}
-                        <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
+                        {renderObjectSprites(question.promptA, objectTheme, 4, 58)}
+                        <Text style={styles.eqCountBlue}>{question.promptA} {objectTheme.name}{question.promptA === 1 ? '' : 's'}</Text>
                       </View>
                     </View>
                     <View style={styles.eqSlotNarrow}><Text style={styles.eqOp}>+</Text></View>
                     <View style={styles.eqSlotWide}>
                       <View style={styles.eqCol}>
-                        {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
-                        <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
+                        {renderObjectSprites(question.promptB ?? 0, objectTheme, 4, 58)}
+                        <Text style={styles.eqCountPink}>{question.promptB} {objectTheme.name}{(question.promptB ?? 0) === 1 ? '' : 's'}</Text>
                       </View>
                     </View>
                     <View style={styles.eqSlotNarrow}><Text style={styles.eqOp}>=</Text></View>
@@ -704,7 +704,7 @@ export default function App() {
                             <Text style={styles.adventureDropTextFilled}>{snappedValue}</Text>
                           )}
                         </View>
-                        <Text style={styles.eqCountQuestion}>{snappedValue == null ? '?' : `${snappedValue} balls`}</Text>
+                        <Text style={styles.eqCountQuestion}>{snappedValue == null ? '?' : `${snappedValue} ${objectTheme.name}${snappedValue === 1 ? '' : 's'}`}</Text>
                       </View>
                     </View>
                   </View>
@@ -712,15 +712,15 @@ export default function App() {
                   <View style={styles.additionAdventureRow}>
                     <View style={styles.eqSlotWide}>
                       <View style={styles.eqCol}>
-                        {renderBallRows(question.promptA, 'blue', 4, 46)}
-                        <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
+                        {renderObjectSprites(question.promptA, objectTheme, 4, 58)}
+                        <Text style={styles.eqCountBlue}>{question.promptA} {objectTheme.name}{question.promptA === 1 ? '' : 's'}</Text>
                       </View>
                     </View>
                     <View style={styles.eqSlotNarrow}><Text style={styles.eqOp}>+</Text></View>
                     <View style={styles.eqSlotWide}>
                       <View style={styles.eqCol}>
-                        {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
-                        <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
+                        {renderObjectSprites(question.promptB ?? 0, objectTheme, 4, 58)}
+                        <Text style={styles.eqCountPink}>{question.promptB} {objectTheme.name}{(question.promptB ?? 0) === 1 ? '' : 's'}</Text>
                       </View>
                     </View>
                     <View style={styles.eqSlotNarrow}><Text style={styles.eqOp}>=</Text></View>
@@ -741,7 +741,7 @@ export default function App() {
                             <Text style={styles.adventureDropTextFilled}>{snappedValue}</Text>
                           )}
                         </View>
-                        <Text style={styles.eqCountQuestion}>{snappedValue == null ? '?' : `${snappedValue} balls`}</Text>
+                        <Text style={styles.eqCountQuestion}>{snappedValue == null ? '?' : `${snappedValue} ${objectTheme.name}${snappedValue === 1 ? '' : 's'}`}</Text>
                       </View>
                     </View>
                   </View>
@@ -835,8 +835,8 @@ export default function App() {
                           style={styles.choiceCard}
                           onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}
                         >
-                          {renderBallRows(opt, 'purple', 4, 28)}
-                          <Text style={styles.choiceCount}>{opt} {opt === 1 ? 'ball' : 'balls'}</Text>
+                          {renderObjectSprites(opt, objectTheme, 4, 34)}
+                          <Text style={styles.choiceCount}>{opt} {objectTheme.name}{opt === 1 ? '' : 's'}</Text>
                         </Pressable>
                       </Animated.View>
                     );
@@ -1070,6 +1070,22 @@ function renderBallRows(count: number, tone: 'blue' | 'pink' | 'purple', perRow 
   );
 }
 
+function renderObjectSprites(count: number, theme: ObjectTheme, perRow = 4, size = 56) {
+  const rows: number[] = [];
+  for (let i = 0; i < count; i += perRow) rows.push(Math.min(perRow, count - i));
+  return (
+    <View style={styles.ballRows}>
+      {rows.map((n, idx) => (
+        <View key={`${theme.name}-${count}-${idx}`} style={styles.ballRow}>
+          {Array.from({ length: n }).map((_, j) => (
+            <Image key={j} source={theme.asset} style={[styles.objectSprite, { width: size, height: size }]} resizeMode="contain" />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function getMasteryLabels(levelStats: Record<string, LevelStat>) {
   const labels: string[] = [];
   const entries = Object.entries(levelStats);
@@ -1213,6 +1229,7 @@ const styles = StyleSheet.create({
   ballBlue: { backgroundColor: '#1A8FE0', shadowColor: '#1A8FE0' },
   ballPink: { backgroundColor: '#E0547D', shadowColor: '#E0547D' },
   ballPurple: { backgroundColor: '#7C3AED', shadowColor: '#7C3AED' },
+  objectSprite: { shadowColor: '#0B1C33', shadowOpacity: 0.22, shadowRadius: 5, shadowOffset: { width: 0, height: 3 } },
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, alignItems: 'center', justifyContent: 'center' },
   objectEmojiRemoved: { display: 'none' },
   appleIcon3d: { width: 72, height: 72 },
