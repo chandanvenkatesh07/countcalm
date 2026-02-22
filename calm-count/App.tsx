@@ -242,7 +242,7 @@ export default function App() {
     }
   }, [screen, chapter, level, dragPos]);
 
-  const shouldUseDrag = question?.mode === 'counting' || question?.mode === 'addition-drag-number';
+  const shouldUseDrag = question?.mode === 'counting' || question?.mode === 'addition-drag-number' || question?.mode === 'addition-image-choice';
 
   function overlaps(a: Rect, b: Rect) {
     return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
@@ -255,17 +255,19 @@ export default function App() {
     onPanResponderRelease: (_, g) => {
       if (!question || draggingNumber == null) return;
 
+      const dragSize = question.mode === 'addition-image-choice' ? 132 : TILE_SIZE;
       const cardRect: Rect = {
-        x: g.moveX - TILE_SIZE / 2,
-        y: g.moveY - TILE_SIZE / 2,
-        width: TILE_SIZE,
-        height: TILE_SIZE,
+        x: g.moveX - dragSize / 2,
+        y: g.moveY - dragSize / 2,
+        width: dragSize,
+        height: dragSize,
       };
 
       const touchingDropZone = !!dropZoneRect && overlaps(cardRect, dropZoneRect);
 
       if (!touchingDropZone) {
         Animated.spring(dragPos, { toValue: { x: 0, y: 0 }, useNativeDriver: false, bounciness: 12 }).start();
+        setDraggingNumber(null);
         return;
       }
 
@@ -362,13 +364,13 @@ export default function App() {
     if (screen === 'parent') return 'Parent Zone. Toggle settings and use Test Chime to confirm sound.';
     if (screen === 'chapterIntro') {
       if (chapter === 'counting') return 'Counting chapter. Drag the correct number card into the drop zone.';
-      if (chapter === 'additionPictures') return 'Addition pictures chapter. Tap the picture option with the correct total.';
+      if (chapter === 'additionPictures') return 'Addition pictures chapter. Drag the correct picture card into the drop zone.';
       if (chapter === 'subtraction') return 'Subtraction chapter. Drag the correct number card into the drop zone.';
       return 'Addition numbers chapter. Drag the correct number card into the drop zone.';
     }
     if (screen === 'question' && question) {
       if (question.mode === 'counting') return 'Count the objects and drag the matching number card into the drop zone.';
-      if (question.mode === 'addition-image-choice') return 'Choose the picture option with the correct total.';
+      if (question.mode === 'addition-image-choice') return 'Drag the picture option with the correct total into the drop zone.';
       return chapter === 'subtraction'
         ? 'Subtract the groups and drag the correct number card into the drop zone.'
         : 'Add both groups and drag the correct number card into the drop zone.';
@@ -517,6 +519,7 @@ export default function App() {
 
   function handleWrongAttempt() {
     if (!firstAttemptMissed) setFirstAttemptMissed(true);
+    setDraggingNumber(null);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     playTone('error');
     if (!playVoiceClip(VOICE_CLIPS.retry)) speakLine("Nice try. Let's try again.");
@@ -707,19 +710,39 @@ export default function App() {
                   </View>
                 ) : chapter === 'additionPictures' ? (
                   <View style={styles.additionAdventureRow}>
-                    <View style={styles.eqCol}>
-                      {renderBallRows(question.promptA, 'blue', 4, 46)}
-                      <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
+                    <View style={styles.eqSlotWide}>
+                      <View style={styles.eqCol}>
+                        {renderBallRows(question.promptA, 'blue', 4, 46)}
+                        <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
+                      </View>
                     </View>
-                    <Text style={styles.eqOp}>+</Text>
-                    <View style={styles.eqCol}>
-                      {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
-                      <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
+                    <View style={styles.eqSlotNarrow}><Text style={styles.eqOp}>+</Text></View>
+                    <View style={styles.eqSlotWide}>
+                      <View style={styles.eqCol}>
+                        {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
+                        <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
+                      </View>
                     </View>
-                    <Text style={styles.eqOp}>=</Text>
-                    <View style={styles.eqCol}>
-                      <View style={styles.adventureDropZone}><Text style={styles.adventureDropText}>❓</Text></View>
-                      <Text style={styles.eqCountQuestion}>?</Text>
+                    <View style={styles.eqSlotNarrow}><Text style={styles.eqOp}>=</Text></View>
+                    <View style={styles.eqSlotWide}>
+                      <View style={styles.eqCol}>
+                        <View
+                          ref={(r) => { dropZoneRef.current = r; }}
+                          onLayout={() => {
+                            dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                              setDropZoneRect({ x, y, width, height });
+                            });
+                          }}
+                          style={styles.adventureDropZone}
+                        >
+                          {snappedValue == null ? (
+                            <Text style={styles.adventureDropText}>❓</Text>
+                          ) : (
+                            <Text style={styles.adventureDropTextFilled}>{snappedValue}</Text>
+                          )}
+                        </View>
+                        <Text style={styles.eqCountQuestion}>{snappedValue == null ? '?' : `${snappedValue} balls`}</Text>
+                      </View>
                     </View>
                   </View>
                 ) : (
@@ -793,12 +816,31 @@ export default function App() {
 
               {question.mode === 'addition-image-choice' ? (
                 <View style={styles.optionRow}>
-                  {question.options.map((opt) => (
-                    <Pressable key={opt} style={styles.choiceCard} onPress={() => handleImageChoice(opt)}>
-                      {renderBallRows(opt, 'purple', 4, 28)}
-                      <Text style={styles.choiceCount}>{opt} {opt === 1 ? 'ball' : 'balls'}</Text>
-                    </Pressable>
-                  ))}
+                  {question.options.map((opt) => {
+                    const flash = optionFlash?.value === opt ? optionFlash.status : null;
+                    return (
+                      <Animated.View
+                        key={opt}
+                        style={[
+                          styles.choiceCardWrap,
+                          snappedValue === opt ? { opacity: 0 } : undefined,
+                          draggingNumber === opt ? dragPos.getLayout() : undefined,
+                          draggingNumber === opt ? { transform: [{ scale: cardLift }] } : undefined,
+                          flash === 'wrong' ? styles.choiceCardWrong : undefined,
+                          flash === 'correct' ? styles.choiceCardCorrect : undefined,
+                        ]}
+                        {...(draggingNumber === opt ? panResponder.panHandlers : {})}
+                      >
+                        <Pressable
+                          style={styles.choiceCard}
+                          onPressIn={() => { setDraggingNumber(opt); dragPos.setValue({ x: 0, y: 0 }); cardLift.setValue(1.03); }}
+                        >
+                          {renderBallRows(opt, 'purple', 4, 28)}
+                          <Text style={styles.choiceCount}>{opt} {opt === 1 ? 'ball' : 'balls'}</Text>
+                        </Pressable>
+                      </Animated.View>
+                    );
+                  })}
                 </View>
               ) : (
                 <View style={styles.optionRow}>
@@ -1184,7 +1226,10 @@ const styles = StyleSheet.create({
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   imageOptionWrap: { width: 360, minHeight: 236, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
   imageOption: { width: '100%', minHeight: 236, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, overflow: 'hidden' },
-  choiceCard: { backgroundColor: '#243669', borderWidth: 2, borderColor: 'rgba(167,139,250,0.65)', borderRadius: 22, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', gap: 8, minWidth: 120 },
+  choiceCardWrap: { minWidth: 132, borderRadius: 22 },
+  choiceCard: { backgroundColor: '#243669', borderWidth: 2, borderColor: 'rgba(167,139,250,0.65)', borderRadius: 22, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', gap: 8, minWidth: 132 },
+  choiceCardWrong: { borderWidth: 2, borderColor: '#FF7C82' },
+  choiceCardCorrect: { borderWidth: 2, borderColor: '#79DB8B' },
   choiceCount: { color: 'rgba(255,255,255,0.8)', fontWeight: '800', fontSize: 14 },
   numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
