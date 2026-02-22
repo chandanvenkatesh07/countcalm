@@ -151,6 +151,7 @@ export default function App() {
   const sym2 = useRef(new Animated.Value(0)).current;
   const sym3 = useRef(new Animated.Value(0)).current;
   const subtractionSweep = useRef(new Animated.Value(0)).current;
+  const subtractionTargetOpacity = useRef(new Animated.Value(1)).current;
   const dropZoneRef = useRef<View | null>(null);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -237,6 +238,7 @@ export default function App() {
       setSnappedValue(null);
       setSubtractionResolved(false);
       subtractionSweep.setValue(0);
+      subtractionTargetOpacity.setValue(1);
       revealScale.setValue(0.6);
       setTimeout(() => {
         dropZoneRef.current?.measureInWindow((x, y, width, height) => {
@@ -502,14 +504,17 @@ export default function App() {
     }
 
     if (chapter === 'subtraction' && question.mode === 'addition-drag-number') {
-      setSubtractionResolved(true);
+      setSubtractionResolved(false);
       subtractionSweep.setValue(0);
+      subtractionTargetOpacity.setValue(1);
       Animated.sequence([
-        Animated.timing(subtractionSweep, { toValue: 56, duration: 220, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(subtractionSweep, { toValue: -56, duration: 220, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(subtractionSweep, { toValue: 30, duration: 180, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(subtractionSweep, { toValue: 0, duration: 180, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ]).start();
+        Animated.timing(subtractionSweep, { toValue: 74, duration: 260, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(subtractionTargetOpacity, { toValue: 0, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(subtractionSweep, { toValue: 0, duration: 220, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]).start(() => {
+        setSubtractionResolved(true);
+        subtractionTargetOpacity.setValue(1);
+      });
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -766,7 +771,9 @@ export default function App() {
                     <View style={styles.symbolSlot}>
                       <Animated.Text style={[styles.plusSign, { transform: [{ translateX: subtractionSweep }] }]}>−</Animated.Text>
                     </View>
-                    <View style={styles.promptGroup}>{renderObjectRows(subtractionResolved ? 0 : (question.promptB ?? 0), objectTheme, 4, 92)}</View>
+                    <Animated.View style={[styles.promptGroup, { opacity: subtractionTargetOpacity }]}>
+                      {renderObjectRows(subtractionResolved ? 0 : (question.promptB ?? 0), objectTheme, 4, 92)}
+                    </Animated.View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
                     <View
                       ref={(r) => { dropZoneRef.current = r; }}
