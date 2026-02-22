@@ -50,6 +50,12 @@ type ProgressStats = {
   daily: Record<string, DayStat>;
 };
 
+type ObjectTheme = {
+  name: string;
+  emoji: string;
+  asset?: any;
+};
+
 const TILE_SIZE = 184;
 const APPLE_3D = require('./assets/objects/apple3d.png');
 const STAR_3D = require('./assets/objects/star3d.png');
@@ -82,6 +88,24 @@ const countingConfigs = [
   { min: 1, max: 10, optionCount: 4 },
 ];
 
+const COMMON_OBJECTS: ObjectTheme[] = [
+  { name: 'Apple', emoji: '🍎', asset: APPLE_3D },
+  { name: 'Banana', emoji: '🍌', asset: BANANA_3D },
+  { name: 'Marble', emoji: '🔵', asset: BALL_3D },
+  { name: 'Beach Ball', emoji: '🏐' },
+  { name: 'Star', emoji: '⭐', asset: STAR_3D },
+  { name: 'Block', emoji: '🧱', asset: BLOCK_3D },
+  { name: 'Car', emoji: '🚗' },
+  { name: 'Book', emoji: '📘' },
+  { name: 'Cup', emoji: '🥤' },
+  { name: 'Flower', emoji: '🌸' },
+  { name: 'Cookie', emoji: '🍪' },
+  { name: 'Pencil', emoji: '✏️' },
+  { name: 'Fish', emoji: '🐟' },
+  { name: 'Leaf', emoji: '🍃' },
+  { name: 'Toy', emoji: '🧸' },
+];
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [settings, setSettings] = useState<Settings>({ skipCounting: false, soundEnabled: true, voiceEnabled: true, minimalAnimations: false });
@@ -102,6 +126,7 @@ export default function App() {
   const [optionFlash, setOptionFlash] = useState<{ value: number; status: 'wrong' | 'correct' } | null>(null);
   const [dropZoneRect, setDropZoneRect] = useState<Rect | null>(null);
   const [snappedValue, setSnappedValue] = useState<number | null>(null);
+  const [objectTheme, setObjectTheme] = useState<ObjectTheme>(COMMON_OBJECTS[0]);
 
   const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const cardLift = useRef(new Animated.Value(1)).current;
@@ -191,6 +216,7 @@ export default function App() {
   useEffect(() => {
     if (screen === 'question') {
       setQuestion(buildQuestion(chapter, level));
+      setObjectTheme(COMMON_OBJECTS[randInt(0, COMMON_OBJECTS.length - 1)]);
       setDraggingNumber(null);
       setFirstAttemptMissed(false);
       dragPos.setValue({ x: 0, y: 0 });
@@ -513,8 +539,6 @@ export default function App() {
 
   const firstTryRate = stats.gamesPlayed ? Math.round((stats.firstTryWins / stats.gamesPlayed) * 100) : 0;
 
-  const objectTheme = getObjectTheme(chapter, level);
-
   const masteryLabels = getMasteryLabels(stats.levelStats);
 
   return (
@@ -634,7 +658,7 @@ export default function App() {
 
               <View style={styles.promptBox}>
                 {question.mode === 'counting' ? (
-                  renderObjectRows(question.answer, objectTheme.asset, 5, 150)
+                  renderObjectRows(question.answer, objectTheme, 5, 150)
                 ) : chapter === 'additionNumbers' ? (
                   <View style={styles.additionAdventureRow}>
                     <View style={styles.eqSlotWide}>
@@ -691,9 +715,9 @@ export default function App() {
                   </View>
                 ) : (
                   <View style={styles.additionPromptRow}>
-                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 92)}</View>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme, 4, 92)}</View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>{chapter === 'subtraction' ? '−' : '+'}</Text></View>
-                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 92)}</View>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme, 4, 92)}</View>
                     <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
                     <View
                       ref={(r) => { dropZoneRef.current = r; }}
@@ -950,7 +974,7 @@ function bagColors(idx: number): [string, string, string] {
   return palettes[idx % palettes.length];
 }
 
-function renderObjectRows(count: number, asset: any, perRow = 5, iconSize = 72) {
+function renderObjectRows(count: number, theme: ObjectTheme, perRow = 5, iconSize = 72) {
   const rows: number[] = [];
   for (let i = 0; i < count; i += perRow) rows.push(Math.min(perRow, count - i));
   return (
@@ -959,11 +983,15 @@ function renderObjectRows(count: number, asset: any, perRow = 5, iconSize = 72) 
         <View key={`${count}-${idx}`} style={styles.appleRow}>
           {Array.from({ length: n }).map((_, j) => (
             <View key={j} style={styles.objectTile}>
-              <Image
-                source={asset}
-                style={[styles.appleIcon3d, { width: iconSize, height: iconSize }]}
-                resizeMode="contain"
-              />
+              {theme.asset ? (
+                <Image
+                  source={theme.asset}
+                  style={[styles.appleIcon3d, { width: iconSize, height: iconSize }]}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={[styles.objectEmoji, { fontSize: Math.max(26, Math.floor(iconSize * 0.5)) }]}>{theme.emoji}</Text>
+              )}
             </View>
           ))}
         </View>
@@ -993,18 +1021,6 @@ function renderBallRows(count: number, tone: 'blue' | 'pink' | 'purple', perRow 
       ))}
     </View>
   );
-}
-
-function getObjectTheme(chapter: Chapter, level: number) {
-  const themes = [
-    { name: 'Apple', asset: APPLE_3D },
-    { name: 'Star', asset: STAR_3D },
-    { name: 'Ball', asset: BALL_3D },
-    { name: 'Block', asset: BLOCK_3D },
-    { name: 'Banana', asset: BANANA_3D },
-  ];
-  const idx = chapter === 'counting' ? (level - 1) % themes.length : (level + 1) % themes.length;
-  return themes[idx];
 }
 
 function getMasteryLabels(levelStats: Record<string, LevelStat>) {
@@ -1150,7 +1166,8 @@ const styles = StyleSheet.create({
   ballBlue: { backgroundColor: '#1A8FE0', shadowColor: '#1A8FE0' },
   ballPink: { backgroundColor: '#E0547D', shadowColor: '#E0547D' },
   ballPurple: { backgroundColor: '#7C3AED', shadowColor: '#7C3AED' },
-  objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+  objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, alignItems: 'center', justifyContent: 'center' },
+  objectEmoji: { textAlign: 'center' },
   appleIcon3d: { width: 72, height: 72 },
   dropZoneWrap: { width: '100%', alignItems: 'center', marginTop: 8, marginBottom: 24 },
   dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.drop, justifyContent: 'center', alignItems: 'center', alignSelf: 'center' },
