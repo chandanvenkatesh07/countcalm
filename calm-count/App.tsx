@@ -97,7 +97,7 @@ export default function App() {
   const [stats, setStats] = useState<ProgressStats>({ gamesPlayed: 0, firstTryWins: 0, levelStats: {}, daily: {} });
   const [revealedAnswer, setRevealedAnswer] = useState<number | null>(null);
   const [sparkle, setSparkle] = useState(false);
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
   const [confettiKey, setConfettiKey] = useState(0);
   const [optionFlash, setOptionFlash] = useState<{ value: number; status: 'wrong' | 'correct' } | null>(null);
   const [dropZoneRect, setDropZoneRect] = useState<Rect | null>(null);
