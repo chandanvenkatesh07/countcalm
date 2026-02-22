@@ -546,7 +546,7 @@ export default function App() {
               <View style={styles.starPill}><MaterialCommunityIcons name="star" size={18} color="#B58400" /><Text style={styles.starText}>{stars}</Text></View>
             </View>
 
-            <View style={styles.gameBoard}>
+            <View style={[styles.gameBoard, (chapter === 'additionNumbers' || chapter === 'additionPictures') && styles.gameBoardAdventure]}>
               {question.mode !== 'counting' && (
                 <View style={styles.equationBoard}>
                   <View style={styles.equationAlignRow}>
@@ -562,15 +562,22 @@ export default function App() {
               <View style={styles.promptBox}>
                 {question.mode === 'counting' ? (
                   renderObjectRows(question.answer, objectTheme.asset, 5, 150)
-                ) : (
-                  <View style={styles.additionPromptRow}>
-                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 92)}</View>
-                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>{chapter === 'subtraction' ? '−' : '+'}</Text></View>
-                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 92)}</View>
-                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
-                    {question.mode === 'addition-image-choice' ? (
-                      <View style={styles.inlineDropZone}><MaterialCommunityIcons name="help" size={30} color={tokens.subtle} /></View>
-                    ) : (
+                ) : chapter === 'additionNumbers' ? (
+                  <View style={styles.additionAdventureRow}>
+                    <View style={styles.eqCol}>
+                      <Text style={[styles.eqNum, styles.eqNumBlue]}>{question.promptA}</Text>
+                      {renderBallRows(question.promptA, 'blue', 4, 46)}
+                      <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
+                    </View>
+                    <Text style={styles.eqOp}>+</Text>
+                    <View style={styles.eqCol}>
+                      <Text style={[styles.eqNum, styles.eqNumPink]}>{question.promptB}</Text>
+                      {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
+                      <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
+                    </View>
+                    <Text style={styles.eqOp}>=</Text>
+                    <View style={styles.eqCol}>
+                      <Text style={[styles.eqNum, styles.eqNumQuestion]}>{snappedValue == null ? '?' : snappedValue}</Text>
                       <View
                         ref={(r) => { dropZoneRef.current = r; }}
                         onLayout={() => {
@@ -578,19 +585,59 @@ export default function App() {
                             setDropZoneRect({ x, y, width, height });
                           });
                         }}
-                        style={styles.inlineDropZone}
+                        style={styles.adventureDropZone}
                       >
                         {snappedValue == null ? (
-                          <MaterialCommunityIcons name="help" size={30} color={tokens.subtle} />
+                          <Text style={styles.adventureDropText}>❓</Text>
                         ) : (
-                          <LinearGradient colors={['#DDF8E1', '#ACEBB7', '#79DB8B']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.snapCard}>
-                            <View style={styles.bagKnot} />
-                            <View style={styles.numberInnerGlow} />
-                            <Text selectable={false} style={styles.snapCardText}>{snappedValue}</Text>
-                          </LinearGradient>
+                          <Text style={styles.adventureDropTextFilled}>{snappedValue}</Text>
                         )}
                       </View>
-                    )}
+                      <Text style={styles.eqCountQuestion}>{snappedValue == null ? '?' : `${snappedValue} balls`}</Text>
+                    </View>
+                  </View>
+                ) : chapter === 'additionPictures' ? (
+                  <View style={styles.additionAdventureRow}>
+                    <View style={styles.eqCol}>
+                      {renderBallRows(question.promptA, 'blue', 4, 46)}
+                      <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
+                    </View>
+                    <Text style={styles.eqOp}>+</Text>
+                    <View style={styles.eqCol}>
+                      {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
+                      <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
+                    </View>
+                    <Text style={styles.eqOp}>=</Text>
+                    <View style={styles.eqCol}>
+                      <View style={styles.adventureDropZone}><Text style={styles.adventureDropText}>❓</Text></View>
+                      <Text style={styles.eqCountQuestion}>?</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.additionPromptRow}>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptA, objectTheme.asset, 4, 92)}</View>
+                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>{chapter === 'subtraction' ? '−' : '+'}</Text></View>
+                    <View style={styles.promptGroup}>{renderObjectRows(question.promptB ?? 0, objectTheme.asset, 4, 92)}</View>
+                    <View style={styles.symbolSlot}><Text style={styles.plusSign}>=</Text></View>
+                    <View
+                      ref={(r) => { dropZoneRef.current = r; }}
+                      onLayout={() => {
+                        dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                          setDropZoneRect({ x, y, width, height });
+                        });
+                      }}
+                      style={styles.inlineDropZone}
+                    >
+                      {snappedValue == null ? (
+                        <MaterialCommunityIcons name="help" size={30} color={tokens.subtle} />
+                      ) : (
+                        <LinearGradient colors={['#DDF8E1', '#ACEBB7', '#79DB8B']} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.snapCard}>
+                          <View style={styles.bagKnot} />
+                          <View style={styles.numberInnerGlow} />
+                          <Text selectable={false} style={styles.snapCardText}>{snappedValue}</Text>
+                        </LinearGradient>
+                      )}
+                    </View>
                   </View>
                 )}
               </View>
@@ -637,12 +684,10 @@ export default function App() {
 
               {question.mode === 'addition-image-choice' ? (
                 <View style={styles.optionRow}>
-                  {question.options.map((opt, idx) => (
-                    <Pressable key={opt} style={styles.imageOptionWrap} onPress={() => handleImageChoice(opt)}>
-                      <LinearGradient colors={bagColors(idx)} start={{ x: 0.1, y: 0.1 }} end={{ x: 0.9, y: 1 }} style={styles.imageOption}>
-                        <View style={styles.numberInnerGlow} />
-                        {renderObjectRows(opt, objectTheme.asset, 4, 72)}
-                      </LinearGradient>
+                  {question.options.map((opt) => (
+                    <Pressable key={opt} style={styles.choiceCard} onPress={() => handleImageChoice(opt)}>
+                      {renderBallRows(opt, 'purple', 4, 28)}
+                      <Text style={styles.choiceCount}>{opt} {opt === 1 ? 'ball' : 'balls'}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -842,6 +887,28 @@ function renderObjectRows(count: number, asset: any, perRow = 5, iconSize = 72) 
   );
 }
 
+function renderBallRows(count: number, tone: 'blue' | 'pink' | 'purple', perRow = 4, size = 46) {
+  const rows: number[] = [];
+  for (let i = 0; i < count; i += perRow) rows.push(Math.min(perRow, count - i));
+  return (
+    <View style={styles.ballRows}>
+      {rows.map((n, idx) => (
+        <View key={`${tone}-${count}-${idx}`} style={styles.ballRow}>
+          {Array.from({ length: n }).map((_, j) => (
+            <View
+              key={j}
+              style={[
+                styles.ball,
+                tone === 'blue' ? styles.ballBlue : tone === 'pink' ? styles.ballPink : styles.ballPurple,
+                { width: size, height: size, borderRadius: size / 2 },
+              ]}
+            />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
 
 function getObjectTheme(chapter: Chapter, level: number) {
   const themes = [
@@ -893,6 +960,7 @@ const styles = StyleSheet.create({
   resetText: { color: '#7A2D2D', fontWeight: '700' },
   topBar: { width: '100%', maxWidth: 1180, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   gameBoard: { width: '100%', maxWidth: 1180, backgroundColor: '#F5FBFD', borderRadius: 22, borderWidth: 1, borderColor: '#DDEFF5', padding: 14, gap: 14 },
+  gameBoardAdventure: { backgroundColor: '#FFFFFF', borderColor: '#C6DFFA', shadowColor: '#3F6EA0', shadowOpacity: 0.16, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
   levelLabel: { fontSize: 23, color: tokens.text, fontWeight: '800' },
   starPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF2C8', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
   starText: { fontSize: 18, fontWeight: '700', color: '#8C6500' },
@@ -900,6 +968,19 @@ const styles = StyleSheet.create({
   equationAlignRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' },
   equationText: { fontSize: 50, fontWeight: '900', color: '#E8FFF2', textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2, lineHeight: 56 },
   promptBox: { backgroundColor: '#BDEEFF', borderRadius: 28, paddingHorizontal: 26, paddingVertical: 18, minHeight: 124, justifyContent: 'center', borderWidth: 1, borderColor: '#99D6EB' },
+  additionAdventureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', backgroundColor: '#1A2750', borderRadius: 22, paddingVertical: 16, paddingHorizontal: 12 },
+  eqCol: { alignItems: 'center', justifyContent: 'center', gap: 6, minWidth: 84 },
+  eqNum: { fontSize: 46, fontWeight: '900', lineHeight: 52, fontFamily: Platform.OS === 'ios' ? 'Avenir-Heavy' : undefined },
+  eqNumBlue: { color: '#7DD3FC' },
+  eqNumPink: { color: '#FDA4AF' },
+  eqNumQuestion: { color: '#FBBF24' },
+  eqOp: { fontSize: 34, fontWeight: '900', color: 'rgba(255,255,255,0.45)', marginBottom: 16 },
+  eqCountBlue: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(125,211,252,0.8)' },
+  eqCountPink: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(253,164,175,0.8)' },
+  eqCountQuestion: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(251,191,36,0.75)' },
+  adventureDropZone: { width: 86, height: 86, borderRadius: 20, borderWidth: 3, borderStyle: 'dashed', borderColor: 'rgba(167,139,250,0.8)', backgroundColor: 'rgba(167,139,250,0.15)', alignItems: 'center', justifyContent: 'center' },
+  adventureDropText: { fontSize: 34 },
+  adventureDropTextFilled: { fontSize: 40, fontWeight: '900', color: '#36D399' },
   additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' },
   promptGroup: { minWidth: 200, alignItems: 'center', justifyContent: 'center' },
   symbolSlot: { width: 70, alignItems: 'center', justifyContent: 'center' },
@@ -908,6 +989,12 @@ const styles = StyleSheet.create({
   inlineDropZoneGhost: { width: TILE_SIZE, height: 1, opacity: 0 },
   appleRows: { alignItems: 'center', justifyContent: 'center', gap: 8 },
   appleRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
+  ballRows: { alignItems: 'center', justifyContent: 'center', gap: 6 },
+  ballRow: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  ball: { shadowOpacity: 0.35, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
+  ballBlue: { backgroundColor: '#1A8FE0', shadowColor: '#1A8FE0' },
+  ballPink: { backgroundColor: '#E0547D', shadowColor: '#E0547D' },
+  ballPurple: { backgroundColor: '#7C3AED', shadowColor: '#7C3AED' },
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   appleIcon3d: { width: 72, height: 72 },
   dropZoneWrap: { width: '100%', alignItems: 'center', marginTop: 8, marginBottom: 24 },
@@ -920,6 +1007,8 @@ const styles = StyleSheet.create({
   optionRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   imageOptionWrap: { width: 360, minHeight: 236, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
   imageOption: { width: '100%', minHeight: 236, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, overflow: 'hidden' },
+  choiceCard: { backgroundColor: '#243669', borderWidth: 2, borderColor: 'rgba(167,139,250,0.65)', borderRadius: 22, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', gap: 8, minWidth: 120 },
+  choiceCount: { color: 'rgba(255,255,255,0.8)', fontWeight: '800', fontSize: 14 },
   numberCardWrap: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, shadowColor: '#5E442F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   numberCard: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 2, borderColor: '#5C4B39', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   bagKnot: { position: 'absolute', top: -2, width: 72, height: 22, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, backgroundColor: 'rgba(105,74,42,0.65)' },
