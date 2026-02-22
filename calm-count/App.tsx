@@ -633,33 +633,39 @@ export default function App() {
                   renderObjectRows(question.answer, objectTheme.asset, 5, 150)
                 ) : chapter === 'additionNumbers' ? (
                   <View style={styles.additionAdventureRow}>
-                    <View style={styles.eqCol}>
-                      {renderBallRows(question.promptA, 'blue', 4, 46)}
-                      <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
-                    </View>
-                    <Text style={styles.eqOp}>+</Text>
-                    <View style={styles.eqCol}>
-                      {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
-                      <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
-                    </View>
-                    <Text style={styles.eqOp}>=</Text>
-                    <View style={styles.eqCol}>
-                      <View
-                        ref={(r) => { dropZoneRef.current = r; }}
-                        onLayout={() => {
-                          dropZoneRef.current?.measureInWindow((x, y, width, height) => {
-                            setDropZoneRect({ x, y, width, height });
-                          });
-                        }}
-                        style={styles.adventureDropZone}
-                      >
-                        {snappedValue == null ? (
-                          <Text style={styles.adventureDropText}>❓</Text>
-                        ) : (
-                          <Text style={styles.adventureDropTextFilled}>{snappedValue}</Text>
-                        )}
+                    <View style={styles.eqSlotWide}>
+                      <View style={styles.eqCol}>
+                        {renderBallRows(question.promptA, 'blue', 4, 46)}
+                        <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
                       </View>
-                      <Text style={styles.eqCountQuestion}>{snappedValue == null ? '?' : `${snappedValue} balls`}</Text>
+                    </View>
+                    <View style={styles.eqSlotNarrow}><Text style={styles.eqOp}>+</Text></View>
+                    <View style={styles.eqSlotWide}>
+                      <View style={styles.eqCol}>
+                        {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
+                        <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
+                      </View>
+                    </View>
+                    <View style={styles.eqSlotNarrow}><Text style={styles.eqOp}>=</Text></View>
+                    <View style={styles.eqSlotWide}>
+                      <View style={styles.eqCol}>
+                        <View
+                          ref={(r) => { dropZoneRef.current = r; }}
+                          onLayout={() => {
+                            dropZoneRef.current?.measureInWindow((x, y, width, height) => {
+                              setDropZoneRect({ x, y, width, height });
+                            });
+                          }}
+                          style={styles.adventureDropZone}
+                        >
+                          {snappedValue == null ? (
+                            <Text style={styles.adventureDropText}>❓</Text>
+                          ) : (
+                            <Text style={styles.adventureDropTextFilled}>{snappedValue}</Text>
+                          )}
+                        </View>
+                        <Text style={styles.eqCountQuestion}>{snappedValue == null ? '?' : `${snappedValue} balls`}</Text>
+                      </View>
                     </View>
                   </View>
                 ) : chapter === 'additionPictures' ? (
@@ -1113,11 +1119,13 @@ const styles = StyleSheet.create({
   promptBox: { backgroundColor: '#BDEEFF', borderRadius: 28, paddingHorizontal: 26, paddingVertical: 18, minHeight: 124, justifyContent: 'center', borderWidth: 1, borderColor: '#99D6EB' },
   additionAdventureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', backgroundColor: '#1A2750', borderRadius: 22, paddingVertical: 16, paddingHorizontal: 12 },
   eqCol: { alignItems: 'center', justifyContent: 'center', gap: 6, minWidth: 84 },
+  eqSlotWide: { width: 200, alignItems: 'center', justifyContent: 'center' },
+  eqSlotNarrow: { width: 70, alignItems: 'center', justifyContent: 'center' },
   eqNum: { fontSize: 46, fontWeight: '900', lineHeight: 52, fontFamily: Platform.OS === 'ios' ? 'Avenir-Heavy' : undefined },
   eqNumBlue: { color: '#7DD3FC' },
   eqNumPink: { color: '#FDA4AF' },
   eqNumQuestion: { color: '#FBBF24' },
-  eqOp: { fontSize: 34, fontWeight: '900', color: 'rgba(255,255,255,0.45)', marginBottom: 16 },
+  eqOp: { fontSize: 34, fontWeight: '900', color: 'rgba(255,255,255,0.45)' },
   eqCountBlue: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(125,211,252,0.8)' },
   eqCountPink: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(253,164,175,0.8)' },
   eqCountQuestion: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(251,191,36,0.75)' },
