@@ -52,8 +52,7 @@ type ProgressStats = {
 
 type ObjectTheme = {
   name: string;
-  emoji: string;
-  asset?: any;
+  asset: any;
 };
 
 const TILE_SIZE = 184;
@@ -62,6 +61,16 @@ const STAR_3D = require('./assets/objects/star3d.png');
 const BALL_3D = require('./assets/objects/ball3d.png');
 const BLOCK_3D = require('./assets/objects/block3d.png');
 const BANANA_3D = require('./assets/objects/banana3d.png');
+const ORANGE_3D = require('./assets/objects/orange3d.png');
+const PEAR_3D = require('./assets/objects/pear3d.png');
+const STRAWBERRY_3D = require('./assets/objects/strawberry3d.png');
+const BEACHBALL_3D = require('./assets/objects/beachball3d.png');
+const TEDDY_3D = require('./assets/objects/teddy3d.png');
+const CAR_3D = require('./assets/objects/car3d.png');
+const BOOK_3D = require('./assets/objects/book3d.png');
+const CUP_3D = require('./assets/objects/cup3d.png');
+const FLOWER_3D = require('./assets/objects/flower3d.png');
+const COOKIE_3D = require('./assets/objects/cookie3d.png');
 
 const VOICE_CLIPS = {
   home: require('./assets/audio/instruction-home.mp3'),
@@ -89,21 +98,21 @@ const countingConfigs = [
 ];
 
 const COMMON_OBJECTS: ObjectTheme[] = [
-  { name: 'Apple', emoji: '🍎', asset: APPLE_3D },
-  { name: 'Banana', emoji: '🍌', asset: BANANA_3D },
-  { name: 'Marble', emoji: '🔵', asset: BALL_3D },
-  { name: 'Beach Ball', emoji: '🏐' },
-  { name: 'Star', emoji: '⭐', asset: STAR_3D },
-  { name: 'Block', emoji: '🧱', asset: BLOCK_3D },
-  { name: 'Car', emoji: '🚗' },
-  { name: 'Book', emoji: '📘' },
-  { name: 'Cup', emoji: '🥤' },
-  { name: 'Flower', emoji: '🌸' },
-  { name: 'Cookie', emoji: '🍪' },
-  { name: 'Pencil', emoji: '✏️' },
-  { name: 'Fish', emoji: '🐟' },
-  { name: 'Leaf', emoji: '🍃' },
-  { name: 'Toy', emoji: '🧸' },
+  { name: 'Apple', asset: APPLE_3D },
+  { name: 'Banana', asset: BANANA_3D },
+  { name: 'Marble', asset: BALL_3D },
+  { name: 'Beach Ball', asset: BEACHBALL_3D },
+  { name: 'Star', asset: STAR_3D },
+  { name: 'Block', asset: BLOCK_3D },
+  { name: 'Orange', asset: ORANGE_3D },
+  { name: 'Pear', asset: PEAR_3D },
+  { name: 'Strawberry', asset: STRAWBERRY_3D },
+  { name: 'Teddy', asset: TEDDY_3D },
+  { name: 'Car', asset: CAR_3D },
+  { name: 'Book', asset: BOOK_3D },
+  { name: 'Cup', asset: CUP_3D },
+  { name: 'Flower', asset: FLOWER_3D },
+  { name: 'Cookie', asset: COOKIE_3D },
 ];
 
 export default function App() {
@@ -983,15 +992,11 @@ function renderObjectRows(count: number, theme: ObjectTheme, perRow = 5, iconSiz
         <View key={`${count}-${idx}`} style={styles.appleRow}>
           {Array.from({ length: n }).map((_, j) => (
             <View key={j} style={styles.objectTile}>
-              {theme.asset ? (
-                <Image
-                  source={theme.asset}
-                  style={[styles.appleIcon3d, { width: iconSize, height: iconSize }]}
-                  resizeMode="contain"
-                />
-              ) : (
-                <Text style={[styles.objectEmoji, { fontSize: Math.max(26, Math.floor(iconSize * 0.5)) }]}>{theme.emoji}</Text>
-              )}
+              <Image
+                source={theme.asset}
+                style={[styles.appleIcon3d, { width: iconSize, height: iconSize }]}
+                resizeMode="contain"
+              />
             </View>
           ))}
         </View>
@@ -1167,7 +1172,7 @@ const styles = StyleSheet.create({
   ballPink: { backgroundColor: '#E0547D', shadowColor: '#E0547D' },
   ballPurple: { backgroundColor: '#7C3AED', shadowColor: '#7C3AED' },
   objectTile: { borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2EEF3', shadowColor: '#7AA8B8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, alignItems: 'center', justifyContent: 'center' },
-  objectEmoji: { textAlign: 'center' },
+  objectEmojiRemoved: { display: 'none' },
   appleIcon3d: { width: 72, height: 72 },
   dropZoneWrap: { width: '100%', alignItems: 'center', marginTop: 8, marginBottom: 24 },
   dropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#AED5DE', backgroundColor: tokens.drop, justifyContent: 'center', alignItems: 'center', alignSelf: 'center' },
