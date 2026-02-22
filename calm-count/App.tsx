@@ -634,19 +634,16 @@ export default function App() {
                 ) : chapter === 'additionNumbers' ? (
                   <View style={styles.additionAdventureRow}>
                     <View style={styles.eqCol}>
-                      <Text style={[styles.eqNum, styles.eqNumBlue]}>{question.promptA}</Text>
                       {renderBallRows(question.promptA, 'blue', 4, 46)}
                       <Text style={styles.eqCountBlue}>{question.promptA} balls</Text>
                     </View>
                     <Text style={styles.eqOp}>+</Text>
                     <View style={styles.eqCol}>
-                      <Text style={[styles.eqNum, styles.eqNumPink]}>{question.promptB}</Text>
                       {renderBallRows(question.promptB ?? 0, 'pink', 4, 46)}
                       <Text style={styles.eqCountPink}>{question.promptB} balls</Text>
                     </View>
                     <Text style={styles.eqOp}>=</Text>
                     <View style={styles.eqCol}>
-                      <Text style={[styles.eqNum, styles.eqNumQuestion]}>{snappedValue == null ? '?' : snappedValue}</Text>
                       <View
                         ref={(r) => { dropZoneRef.current = r; }}
                         onLayout={() => {
@@ -1124,7 +1121,7 @@ const styles = StyleSheet.create({
   eqCountBlue: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(125,211,252,0.8)' },
   eqCountPink: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(253,164,175,0.8)' },
   eqCountQuestion: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(251,191,36,0.75)' },
-  adventureDropZone: { width: 86, height: 86, borderRadius: 20, borderWidth: 3, borderStyle: 'dashed', borderColor: 'rgba(167,139,250,0.8)', backgroundColor: 'rgba(167,139,250,0.15)', alignItems: 'center', justifyContent: 'center' },
+  adventureDropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 3, borderStyle: 'dashed', borderColor: 'rgba(167,139,250,0.8)', backgroundColor: 'rgba(167,139,250,0.15)', alignItems: 'center', justifyContent: 'center' },
   adventureDropText: { fontSize: 34 },
   adventureDropTextFilled: { fontSize: 40, fontWeight: '900', color: '#36D399' },
   additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' },
