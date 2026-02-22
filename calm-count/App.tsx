@@ -472,7 +472,11 @@ export default function App() {
       Animated.spring(cardLift, { toValue: 1.08, useNativeDriver: true, bounciness: 8 }),
       Animated.spring(cardLift, { toValue: 1, useNativeDriver: true, bounciness: 6 }),
     ]).start();
-    const waitMs = question.mode === 'addition-image-choice' ? 3000 : 1050;
+    const waitMs = question.mode === 'addition-image-choice'
+      ? 3200
+      : settings.voiceEnabled
+      ? 2400
+      : 1300;
     setTimeout(() => advanceAfterSuccess(firstTry), waitMs);
   }
 
@@ -1131,7 +1135,7 @@ const styles = StyleSheet.create({
   eqCountQuestion: { fontSize: 12, textTransform: 'uppercase', fontWeight: '800', color: 'rgba(251,191,36,0.75)' },
   adventureDropZone: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 24, borderWidth: 3, borderStyle: 'dashed', borderColor: 'rgba(167,139,250,0.8)', backgroundColor: 'rgba(167,139,250,0.15)', alignItems: 'center', justifyContent: 'center' },
   adventureDropText: { fontSize: 34 },
-  adventureDropTextFilled: { fontSize: 40, fontWeight: '900', color: '#36D399' },
+  adventureDropTextFilled: { fontSize: 92, lineHeight: 98, fontWeight: '900', color: '#36D399' },
   additionPromptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' },
   promptGroup: { minWidth: 200, alignItems: 'center', justifyContent: 'center' },
   symbolSlot: { width: 70, alignItems: 'center', justifyContent: 'center' },
