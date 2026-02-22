@@ -108,6 +108,13 @@ export default function App() {
   const screenFade = useRef(new Animated.Value(0)).current;
   const revealScale = useRef(new Animated.Value(0.6)).current;
   const webAudioCtxRef = useRef<any>(null);
+  const mascotBob = useRef(new Animated.Value(0)).current;
+  const cloudAOffset = useRef(new Animated.Value(0)).current;
+  const cloudBOffset = useRef(new Animated.Value(0)).current;
+  const cloudCOffset = useRef(new Animated.Value(0)).current;
+  const sym1 = useRef(new Animated.Value(0)).current;
+  const sym2 = useRef(new Animated.Value(0)).current;
+  const sym3 = useRef(new Animated.Value(0)).current;
   const dropZoneRef = useRef<View | null>(null);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -133,6 +140,53 @@ export default function App() {
     }).start();
     return () => screenFade.setValue(0);
   }, [screen, settings.minimalAnimations, screenFade]);
+
+  useEffect(() => {
+    if (settings.minimalAnimations) {
+      mascotBob.setValue(0);
+      cloudAOffset.setValue(0);
+      cloudBOffset.setValue(0);
+      cloudCOffset.setValue(0);
+      sym1.setValue(0);
+      sym2.setValue(0);
+      sym3.setValue(0);
+      return;
+    }
+
+    const loops = [
+      Animated.loop(Animated.sequence([
+        Animated.timing(mascotBob, { toValue: -8, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(mascotBob, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])),
+      Animated.loop(Animated.sequence([
+        Animated.timing(cloudAOffset, { toValue: 18, duration: 7000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(cloudAOffset, { toValue: 0, duration: 7000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])),
+      Animated.loop(Animated.sequence([
+        Animated.timing(cloudBOffset, { toValue: -14, duration: 9000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(cloudBOffset, { toValue: 0, duration: 9000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])),
+      Animated.loop(Animated.sequence([
+        Animated.timing(cloudCOffset, { toValue: 10, duration: 8000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(cloudCOffset, { toValue: 0, duration: 8000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])),
+      Animated.loop(Animated.sequence([
+        Animated.timing(sym1, { toValue: -10, duration: 2200, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(sym1, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])),
+      Animated.loop(Animated.sequence([
+        Animated.timing(sym2, { toValue: -12, duration: 2600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(sym2, { toValue: 0, duration: 2600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])),
+      Animated.loop(Animated.sequence([
+        Animated.timing(sym3, { toValue: -8, duration: 2000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(sym3, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])),
+    ];
+
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [settings.minimalAnimations, mascotBob, cloudAOffset, cloudBOffset, cloudCOffset, sym1, sym2, sym3]);
 
   useEffect(() => {
     if (screen === 'question') {
@@ -485,13 +539,20 @@ export default function App() {
         {screen === 'home' && (
           <View style={styles.homeWrap}>
             <View style={styles.sceneSun} />
-            <View style={[styles.sceneCloud, styles.sceneCloudA]} />
-            <View style={[styles.sceneCloud, styles.sceneCloudB]} />
-            <View style={[styles.sceneCloud, styles.sceneCloudC]} />
+            <Animated.View style={[styles.sceneCloud, styles.sceneCloudA, { transform: [{ translateX: cloudAOffset }] }]} />
+            <Animated.View style={[styles.sceneCloud, styles.sceneCloudB, { transform: [{ translateX: cloudBOffset }] }]} />
+            <Animated.View style={[styles.sceneCloud, styles.sceneCloudC, { transform: [{ translateX: cloudCOffset }] }]} />
+            <Animated.Text style={[styles.floatSymbol, styles.floatSymbol1, { transform: [{ translateY: sym1 }] }]}>+</Animated.Text>
+            <Animated.Text style={[styles.floatSymbol, styles.floatSymbol2, { transform: [{ translateY: sym2 }] }]}>=</Animated.Text>
+            <Animated.Text style={[styles.floatSymbol, styles.floatSymbol3, { transform: [{ translateY: sym3 }] }]}>★</Animated.Text>
             <View style={styles.sceneHills} />
 
             <Text style={styles.homeTitle}>Calm Count</Text>
             <Text style={styles.homeSubtitle}>Beautiful, calm math learning for ages 4–6</Text>
+            <Animated.View style={[styles.mascotWrap, { transform: [{ translateY: mascotBob }] }]}> 
+              <Text style={styles.mascot}>🦊</Text>
+              <View style={styles.mascotSpeech}><Text style={styles.mascotSpeechText}>Let’s learn math! 🎉</Text></View>
+            </Animated.View>
 
             <View style={styles.homeModeGrid}>
               <HomeModeCard title="Counting" icon="numeric" onPress={() => startChapter('counting')} />
@@ -994,6 +1055,10 @@ const styles = StyleSheet.create({
   sceneCloudA: { top: 52, left: 40, width: 130, height: 44 },
   sceneCloudB: { top: 122, right: 140, width: 96, height: 34 },
   sceneCloudC: { top: 174, left: 180, width: 112, height: 36 },
+  floatSymbol: { position: 'absolute', fontSize: 40, fontWeight: '900', color: 'rgba(255,255,255,0.30)' },
+  floatSymbol1: { left: 120, top: 110 },
+  floatSymbol2: { right: 170, top: 180 },
+  floatSymbol3: { left: 260, top: 210 },
   sceneHills: {
     position: 'absolute',
     left: -40,
@@ -1005,7 +1070,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#93E06F',
   },
   homeTitle: { fontSize: 64, fontWeight: '900', color: '#1D4E72', textAlign: 'center', marginTop: 12 },
-  homeSubtitle: { fontSize: 18, color: '#3D6A84', textAlign: 'center', marginTop: 8, marginBottom: 24 },
+  homeSubtitle: { fontSize: 18, color: '#3D6A84', textAlign: 'center', marginTop: 8, marginBottom: 10 },
+  mascotWrap: { position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  mascot: { fontSize: 96 },
+  mascotSpeech: { position: 'absolute', right: -110, top: 8, backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#D9ECF7' },
+  mascotSpeechText: { color: '#37596D', fontWeight: '700', fontSize: 14 },
   homeModeGrid: { width: '100%', maxWidth: 920, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 },
   homeModeCard: {
     minWidth: 240,
