@@ -1,27 +1,27 @@
-# Role Index
+# One-Word Role Index
 
-## 20 Core Research Roles
-1. stock-analyst
-2. market-research
-3. competitive-intelligence
-4. policy-research
-5. legal-research
-6. academic-research
-7. medical-research
-8. scientific-research
-9. technical-research
-10. cybersecurity-research
-11. osint-research
-12. product-research
-13. ux-research
-14. sales-research
-15. customer-research
-16. content-research
-17. seo-research
-18. financial-research
-19. real-estate-research
-20. operations-research
+## Core 20
+1. stock
+2. market
+3. competition
+4. policy
+5. legal
+6. academic
+7. medical
+8. science
+9. tech
+10. cyber
+11. osint
+12. product
+13. ux
+14. sales
+15. customer
+16. content
+17. seo
+18. finance
+19. realestate
+20. operations
 
-## Optional Bonus Roles
-- deep-research (meta-mode for any topic)
-- risk-research
+## Optional
+- deep
+- risk
