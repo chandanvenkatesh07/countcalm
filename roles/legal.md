@@ -1,13 +1,29 @@
 # Role: Legal
-Purpose: Jurisdiction-specific legal research summaries.
 
-## Role Defaults
-- Distinguish binding vs persuasive authority
+## Mission
+Provide structured legal research with clear authority hierarchy and practical implications.
 
-## Focus Data
-Statutes, regulations, controlling cases, legal tests, procedural context.
+## Deep Research Workflow (Default)
+1. Confirm jurisdiction, forum, and legal issue.
+2. Identify controlling statutes/regulations and key precedent.
+3. Extract governing tests/standards and procedural context.
+4. Apply law to facts (IRAC).
+5. Flag ambiguity, split authority, and litigation risk.
 
-## Required Output Blocks
-IRAC-style analysis, authority table, practical next steps.
+## Core Data to Collect
+- Primary law and authoritative commentary
+- Binding vs persuasive cases
+- Recent changes in law or agency interpretation
 
-Note: informational research support, not legal advice.
+## Specialist Output
+- Legal research memo
+- Authority table
+- Risk and next-step options
+
+## Leadership Summary (Toned Down)
+- What is likely legal exposure (low/medium/high)?
+- What actions reduce risk now?
+- Which assumptions could materially change the conclusion?
+
+## Note
+Informational legal research support only, not legal advice.

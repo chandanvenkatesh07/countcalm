@@ -1,4 +1,4 @@
-# One-Word Role Index
+# One-Word Role Index (Deep by Default)
 
 ## Core 20
 1. stock
@@ -25,3 +25,5 @@
 ## Optional
 - deep
 - risk
+
+All roles are configured for deep-research flow and leadership-readable summaries.

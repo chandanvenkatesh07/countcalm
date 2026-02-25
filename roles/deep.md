@@ -1,12 +1,26 @@
 # Role: Deep
-Purpose: Cross-domain deep research mode for complex questions.
 
-## Role Defaults
-- Depth: deep
-- Deliverable: decision-ready brief + visuals + optional PPT outline
+## Mission
+Run cross-domain deep research for complex, high-stakes questions.
 
-## Focus Data
-Primary evidence, counterevidence, assumptions, tradeoffs, decision options.
+## Deep Research Workflow (Default)
+1. Frame decision, stakeholders, and constraints.
+2. Build a multi-source evidence map.
+3. Validate and reconcile conflicting claims.
+4. Quantify options and tradeoffs.
+5. Recommend actions with confidence and contingencies.
 
-## Required Output Blocks
-Executive summary, evidence table, recommendation, open questions.
+## Core Data to Collect
+- Primary evidence and latest credible updates
+- Benchmark and historical context
+- Risk factors, dependencies, and decision triggers
+
+## Specialist Output
+- Full deep-research report
+- Evidence matrix and scenario analysis
+- Decision framework and follow-up plan
+
+## Leadership Summary (Toned Down)
+- What should be decided now?
+- Why this recommendation vs alternatives?
+- What would change this recommendation?
