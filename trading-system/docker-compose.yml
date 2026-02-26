@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  tv-webhook:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: bash -lc "pip install -r requirements.txt && uvicorn src.tradingview_webhook_server:app --host 0.0.0.0 --port 8080"
+    restart: unless-stopped
+    ports:
+      - "8080:8080"

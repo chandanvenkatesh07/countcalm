@@ -1,0 +1,7 @@
+{
+  "secret": "REPLACE_WITH_YOUR_WEBHOOK_SECRET",
+  "symbol": "{{ticker}}",
+  "action": "BUY",
+  "price": {{close}},
+  "note": "{{exchange}} {{interval}}"
+}
