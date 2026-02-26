@@ -49,12 +49,19 @@ Run TradingView webhook listener:
 uvicorn src.tradingview_webhook_server:app --host 0.0.0.0 --port 8080
 ```
 
-## Suggested live workflow
+## Suggested live workflow (your setup: alerts + manual execution)
 - Use this system for rule-based candidates + risk checks
 - Use TradingView for final chart validation
 - Send webhook from TradingView alert to this service
 - Auto-send Telegram action message (BUY/SELL/WAIT)
-- Start with paper trading for 4-8 weeks before live money
+- You manually execute in Robinhood (no auto-trading)
+- Log whether each signal was executed or skipped
+
+Manual trade logging:
+```bash
+python -m src.log_trade --symbol NVDA --action BUY --price 122.5 --qty 10 --status executed --note "took alert"
+python -m src.log_trade --symbol AAPL --action BUY --status skipped --note "already overexposed"
+```
 
 ## Next upgrades (after validation)
 - Real broker integration (Alpaca/IBKR)

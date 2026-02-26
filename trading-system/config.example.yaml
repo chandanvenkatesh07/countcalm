@@ -2,6 +2,7 @@ starting_capital: 10000
 base_currency: USD
 
 risk:
+  # Recommended: 0.5% to 2% risk per trade. 20% is extremely aggressive.
   max_risk_per_trade_pct: 1.0
   max_positions: 8
   max_sector_exposure_pct: 35
