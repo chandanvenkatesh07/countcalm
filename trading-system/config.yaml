@@ -1,0 +1,26 @@
+starting_capital: 10000
+base_currency: USD
+
+risk:
+  # Recommended: 0.5% to 2% risk per trade. 20% is extremely aggressive.
+  max_risk_per_trade_pct: 1.0
+  max_positions: 8
+  max_sector_exposure_pct: 35
+  max_portfolio_drawdown_pct: 12
+  default_stop_loss_pct: 7
+  trailing_stop_pct: 10
+
+universe:
+  sector_etfs: ["XLB","XLE","XLF","XLI","XLK","XLP","XLRE","XLU","XLV","XLY"]
+  tradable_symbols: ["AAPL","MSFT","NVDA","AMZN","META","LLY","JPM","XOM","UNH","COST","AVGO","AMD"]
+
+telegram:
+  bot_token: "REPLACE_ME"
+  chat_id: "REPLACE_ME"
+
+tradingview:
+  webhook_secret: "REPLACE_WITH_STRONG_SECRET"
+
+news:
+  grok_api_key: ""
+  enabled: false

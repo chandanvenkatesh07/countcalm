@@ -49,6 +49,11 @@ Run TradingView webhook listener:
 uvicorn src.tradingview_webhook_server:app --host 0.0.0.0 --port 8080
 ```
 
+Run dashboard UI (portfolio + win/loss + projections base):
+```bash
+streamlit run src/dashboard.py --server.port 8501 --server.address 0.0.0.0
+```
+
 ## Suggested live workflow (your setup: alerts + manual execution)
 - Use this system for rule-based candidates + risk checks
 - Use TradingView for final chart validation
