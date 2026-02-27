@@ -10,11 +10,15 @@ from apscheduler.triggers.cron import CronTrigger
 
 from .config import settings
 from .db import Base, engine, get_db, SessionLocal
-from .models import Portfolio, Transaction
+from .models import Portfolio, Transaction, DeletedTransaction, ActivityLog, PortfolioSnapshot
 from .schemas import TransactionCreate, PortfolioCreate, TransactionUpdate
 from .services import get_or_create_stock, refresh_all_closes, compute_positions, dashboard_summary, create_daily_snapshot
 
 scheduler = BackgroundScheduler(timezone="America/New_York")
+
+
+def log_action(db: Session, action: str, detail: str):
+    db.add(ActivityLog(action=action, detail=detail[:500]))
 
 
 def ensure_seed(db: Session):
@@ -84,14 +88,65 @@ def list_portfolios(db: Session = Depends(get_db)):
 
 @app.post("/api/v1/portfolios")
 def create_portfolio(payload: PortfolioCreate, db: Session = Depends(get_db)):
-    exists = db.scalar(select(Portfolio).where(Portfolio.name == payload.name.strip()))
+    name = payload.name.strip()
+    exists = db.scalar(select(Portfolio).where(Portfolio.name == name))
     if exists:
         raise HTTPException(status_code=400, detail="Portfolio already exists")
-    p = Portfolio(name=payload.name.strip(), initial_cash=payload.initial_cash)
+    p = Portfolio(name=name, initial_cash=payload.initial_cash)
     db.add(p)
+    log_action(db, "portfolio.create", f"Created portfolio '{name}'")
     db.commit()
     db.refresh(p)
     return {"status": "success", "data": {"id": p.id, "name": p.name}}
+
+
+@app.put("/api/v1/portfolios/{portfolio_id}")
+def rename_portfolio(portfolio_id: int, payload: PortfolioCreate, db: Session = Depends(get_db)):
+    p = db.get(Portfolio, portfolio_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    name = payload.name.strip()
+    other = db.scalar(select(Portfolio).where(Portfolio.name == name, Portfolio.id != portfolio_id))
+    if other:
+        raise HTTPException(status_code=400, detail="Portfolio name already in use")
+    old = p.name
+    p.name = name
+    p.initial_cash = payload.initial_cash
+    log_action(db, "portfolio.rename", f"Renamed '{old}' to '{name}'")
+    db.commit()
+    return {"status": "success"}
+
+
+@app.delete("/api/v1/portfolios/{portfolio_id}")
+def delete_portfolio(portfolio_id: int, force: bool = Query(False), db: Session = Depends(get_db)):
+    p = db.get(Portfolio, portfolio_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    total = db.scalar(select(Transaction).where(Transaction.portfolio_id == p.id).limit(1))
+    all_count = len(db.scalars(select(Portfolio.id)).all())
+    if all_count <= 1:
+        raise HTTPException(status_code=400, detail="At least one portfolio must remain")
+    if total and not force:
+        raise HTTPException(status_code=400, detail="Portfolio has transactions. Retry with force=true")
+    if total:
+        txs = db.scalars(select(Transaction).where(Transaction.portfolio_id == p.id)).all()
+        for tx in txs:
+            db.add(DeletedTransaction(
+                original_transaction_id=tx.id,
+                portfolio_id=tx.portfolio_id,
+                stock_id=tx.stock_id,
+                transaction_type=tx.transaction_type,
+                quantity=tx.quantity,
+                price_per_share=tx.price_per_share,
+                fees=tx.fees,
+                executed_at=tx.executed_at,
+                notes=tx.notes,
+            ))
+            db.delete(tx)
+    log_action(db, "portfolio.delete", f"Deleted portfolio '{p.name}'")
+    db.delete(p)
+    db.commit()
+    return {"status": "success"}
 
 
 @app.post("/api/v1/transactions")
@@ -119,6 +174,7 @@ def add_transaction(payload: TransactionCreate, portfolio_id: int = Query(defaul
         notes=payload.notes,
     )
     db.add(tx)
+    log_action(db, "transaction.create", f"{tx_type} {payload.quantity} {stock.ticker} in {p.name}")
     db.commit()
     db.refresh(tx)
     return {"status": "success", "data": {"id": tx.id}}
@@ -141,6 +197,7 @@ def edit_transaction(tx_id: int, payload: TransactionUpdate, db: Session = Depen
     tx.fees = payload.fees
     tx.executed_at = payload.executed_at
     tx.notes = payload.notes
+    log_action(db, "transaction.update", f"Updated tx #{tx_id}")
     db.commit()
     return {"status": "success"}
 
@@ -150,7 +207,43 @@ def delete_transaction(tx_id: int, db: Session = Depends(get_db)):
     tx = db.get(Transaction, tx_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
+    archive = DeletedTransaction(
+        original_transaction_id=tx.id,
+        portfolio_id=tx.portfolio_id,
+        stock_id=tx.stock_id,
+        transaction_type=tx.transaction_type,
+        quantity=tx.quantity,
+        price_per_share=tx.price_per_share,
+        fees=tx.fees,
+        executed_at=tx.executed_at,
+        notes=tx.notes,
+    )
+    db.add(archive)
     db.delete(tx)
+    log_action(db, "transaction.delete", f"Deleted tx #{tx_id}")
+    db.commit()
+    db.refresh(archive)
+    return {"status": "success", "data": {"undo_id": archive.id}}
+
+
+@app.post("/api/v1/transactions/undo-delete/{undo_id}")
+def undo_delete_transaction(undo_id: int, db: Session = Depends(get_db)):
+    archived = db.get(DeletedTransaction, undo_id)
+    if not archived:
+        raise HTTPException(status_code=404, detail="Undo record not found")
+    tx = Transaction(
+        portfolio_id=archived.portfolio_id,
+        stock_id=archived.stock_id,
+        transaction_type=archived.transaction_type,
+        quantity=archived.quantity,
+        price_per_share=archived.price_per_share,
+        fees=archived.fees,
+        executed_at=archived.executed_at,
+        notes=archived.notes,
+    )
+    db.add(tx)
+    db.delete(archived)
+    log_action(db, "transaction.undo", f"Restored tx from undo #{undo_id}")
     db.commit()
     return {"status": "success"}
 
@@ -189,6 +282,65 @@ def dashboard(portfolio_id: int = Query(default=None), db: Session = Depends(get
     p = get_portfolio_or_404(db, portfolio_id)
     refresh_all_closes(db)
     return {"status": "success", "data": dashboard_summary(db, p.id)}
+
+
+@app.get("/api/v1/dashboard/combined")
+def dashboard_combined(db: Session = Depends(get_db)):
+    refresh_all_closes(db)
+    portfolios = db.scalars(select(Portfolio).order_by(Portfolio.id.asc())).all()
+    by_portfolio = []
+    total_cost = 0.0
+    total_value = 0.0
+    total_pnl = 0.0
+    for p in portfolios:
+        d = dashboard_summary(db, p.id)
+        by_portfolio.append({"id": p.id, "name": p.name, **d})
+        total_cost += float(d["total_cost"])
+        total_value += float(d["total_value"])
+        total_pnl += float(d["unrealized_pnl"])
+    total_pnl_pct = (total_pnl / total_cost * 100) if total_cost else 0
+    return {
+        "status": "success",
+        "data": {
+            "total_cost": round(total_cost, 2),
+            "total_value": round(total_value, 2),
+            "unrealized_pnl": round(total_pnl, 2),
+            "unrealized_pnl_pct": round(total_pnl_pct, 2),
+            "by_portfolio": by_portfolio,
+        },
+    }
+
+
+@app.get("/api/v1/snapshots")
+def snapshots(portfolio_id: int = Query(default=None), days: int = Query(30), db: Session = Depends(get_db)):
+    p = get_portfolio_or_404(db, portfolio_id)
+    rows = db.scalars(
+        select(PortfolioSnapshot)
+        .where(PortfolioSnapshot.portfolio_id == p.id)
+        .order_by(PortfolioSnapshot.snapshot_date.desc())
+        .limit(max(1, min(days, 365)))
+    ).all()
+    rows = list(reversed(rows))
+    return {
+        "status": "success",
+        "data": [
+            {
+                "date": r.snapshot_date.isoformat(),
+                "total_value": float(r.total_value),
+                "daily_pnl": float(r.daily_pnl),
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/v1/activity")
+def activity(limit: int = Query(20), db: Session = Depends(get_db)):
+    rows = db.scalars(select(ActivityLog).order_by(ActivityLog.created_at.desc()).limit(max(1, min(limit, 100)))).all()
+    return {
+        "status": "success",
+        "data": [{"id": r.id, "action": r.action, "detail": r.detail, "created_at": r.created_at.isoformat()} for r in rows],
+    }
 
 
 @app.post("/api/v1/snapshot/run")

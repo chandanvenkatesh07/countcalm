@@ -4,13 +4,16 @@ Single-user local portfolio tracker (FIFO) with dark desktop UI.
 
 ## Features in this MVP
 - Add BUY/SELL trades
-- Edit/Delete entered trades
-- Multiple portfolio groups (e.g., 401K / Personal / ESPP)
+- Full edit modal (ticker, type, qty, price, fees, datetime, notes)
+- Delete + undo (soft-delete archive)
+- Multiple portfolio groups (e.g., 401K / Personal / ESPP) with rename/delete
 - FIFO position and cost-basis computation
-- Dashboard with total value and unrealized P&L
+- Dashboard with selected + combined totals/P&L
+- 30-day snapshot mini trend chart
 - Last close prices from Yahoo Finance (no intraday stream)
 - SPY/QQQ 1Y benchmark comparison
 - End-of-day snapshot scheduler (4:05 PM ET)
+- Activity log for create/edit/delete actions
 - Docker local stack (frontend + backend + postgres)
 - Seed data included
 

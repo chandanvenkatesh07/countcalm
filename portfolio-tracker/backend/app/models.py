@@ -46,6 +46,31 @@ class Transaction(Base):
     stock = relationship("Stock", back_populates="transactions")
 
 
+class DeletedTransaction(Base):
+    __tablename__ = "deleted_transactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    original_transaction_id: Mapped[int] = mapped_column(Integer, index=True)
+    portfolio_id: Mapped[int] = mapped_column(Integer, index=True)
+    stock_id: Mapped[int] = mapped_column(Integer, index=True)
+    transaction_type: Mapped[str] = mapped_column(String(10))
+    quantity: Mapped[float] = mapped_column(Numeric(12, 6))
+    price_per_share: Mapped[float] = mapped_column(Numeric(12, 4))
+    fees: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
+    executed_at: Mapped[datetime] = mapped_column(DateTime)
+    notes: Mapped[str] = mapped_column(String(500), default="")
+    deleted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    action: Mapped[str] = mapped_column(String(50), index=True)
+    detail: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
 class PortfolioSnapshot(Base):
     __tablename__ = "portfolio_snapshots"
     __table_args__ = (UniqueConstraint("portfolio_id", "snapshot_date", name="uq_snapshot"),)
