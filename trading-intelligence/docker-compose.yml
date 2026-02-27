@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: trading_intel
+      POSTGRES_USER: trading
+      POSTGRES_PASSWORD: trading
+    ports:
+      - "5434:5432"
+    volumes:
+      - ti_pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://trading:trading@db:5432/trading_intel
+    depends_on:
+      - db
+    ports:
+      - "8100:8100"
+
+volumes:
+  ti_pgdata:
