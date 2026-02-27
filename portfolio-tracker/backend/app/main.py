@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta, date
 
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -340,6 +340,52 @@ def activity(limit: int = Query(20), db: Session = Depends(get_db)):
     return {
         "status": "success",
         "data": [{"id": r.id, "action": r.action, "detail": r.detail, "created_at": r.created_at.isoformat()} for r in rows],
+    }
+
+
+@app.get("/api/v1/analytics")
+def analytics(portfolio_id: int = Query(default=None), period: str = Query("1M"), db: Session = Depends(get_db)):
+    p = get_portfolio_or_404(db, portfolio_id)
+    refresh_all_closes(db)
+
+    period_map = {"1W": 7, "1M": 30, "3M": 90, "6M": 180, "1Y": 365, "ALL": 3650}
+    days = period_map.get(period.upper(), 30)
+    cutoff = date.today() - timedelta(days=days)
+
+    snap_rows = db.scalars(
+        select(PortfolioSnapshot)
+        .where(PortfolioSnapshot.portfolio_id == p.id, PortfolioSnapshot.snapshot_date >= cutoff)
+        .order_by(PortfolioSnapshot.snapshot_date.asc())
+    ).all()
+
+    positions_data = compute_positions(db, p.id)
+    total_value = sum(float(x["current_value"]) for x in positions_data) or 1.0
+
+    allocation = [
+        {
+            "ticker": x["ticker"],
+            "value": float(x["current_value"]),
+            "weight_pct": round(float(x["current_value"]) / total_value * 100, 2),
+        }
+        for x in sorted(positions_data, key=lambda z: z["current_value"], reverse=True)
+    ]
+
+    gainers = sorted(positions_data, key=lambda z: z["unrealized_pnl"], reverse=True)[:5]
+    losers = sorted(positions_data, key=lambda z: z["unrealized_pnl"])[:5]
+
+    series = [{"date": s.snapshot_date.isoformat(), "value": float(s.total_value)} for s in snap_rows]
+    if not series and positions_data:
+        series = [{"date": date.today().isoformat(), "value": sum(float(x["current_value"]) for x in positions_data)}]
+
+    return {
+        "status": "success",
+        "data": {
+            "period": period.upper(),
+            "series": series,
+            "allocation": allocation,
+            "top_gainers": gainers,
+            "top_losers": losers,
+        },
     }
 
 

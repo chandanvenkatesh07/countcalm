@@ -20,6 +20,8 @@ export default function Page() {
   const [transactions, setTransactions] = useState([]);
   const [activity, setActivity] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('1M');
+  const [analytics, setAnalytics] = useState({ series: [], allocation: [], top_gainers: [], top_losers: [] });
   const [newPortfolio, setNewPortfolio] = useState('');
   const [renamePortfolio, setRenamePortfolio] = useState('');
   const [editTx, setEditTx] = useState(null);
@@ -39,13 +41,14 @@ export default function Page() {
   async function loadData(pid = portfolioId) {
     if (!pid) return;
     const q = `?portfolio_id=${pid}`;
-    const [d, p, t, c, a, s] = await Promise.all([
+    const [d, p, t, c, a, s, an] = await Promise.all([
       api(`/api/v1/dashboard${q}`),
       api(`/api/v1/positions${q}`),
       api(`/api/v1/transactions${q}`),
       api('/api/v1/dashboard/combined'),
       api('/api/v1/activity?limit=10'),
       api(`/api/v1/snapshots${q}&days=30`),
+      api(`/api/v1/analytics${q}&period=${analyticsPeriod}`),
     ]);
     setDashboard(d.data);
     setPositions(p.data || []);
@@ -53,6 +56,7 @@ export default function Page() {
     setCombined(c.data || null);
     setActivity(a.data || []);
     setSnapshots(s.data || []);
+    setAnalytics(an.data || { series: [], allocation: [], top_gainers: [], top_losers: [] });
   }
 
   useEffect(() => { loadPortfolios().catch(e => setError(e.message)); }, []);
@@ -62,7 +66,7 @@ export default function Page() {
       if (p) setRenamePortfolio(p.name);
       loadData(portfolioId).catch(e => setError(e.message));
     }
-  }, [portfolioId]);
+  }, [portfolioId, analyticsPeriod]);
 
   async function createPortfolio() {
     if (!newPortfolio.trim()) return;
@@ -210,6 +214,54 @@ export default function Page() {
             const h = Math.max(8, Math.round((s.total_value / max) * 70));
             return <div key={i} title={`${s.date}: ${s.total_value}`} style={{width:8, height:h, background:'#3b82f6', borderRadius:4}} />;
           })}
+        </div>
+      </div>
+
+      <div className="card">
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <h2>Analytics</h2>
+          <select value={analyticsPeriod} onChange={e => setAnalyticsPeriod(e.target.value)}>
+            <option>1W</option><option>1M</option><option>3M</option><option>6M</option><option>1Y</option><option>ALL</option>
+          </select>
+        </div>
+        <div className="grid grid-2">
+          <div>
+            <h3>P&L Curve</h3>
+            <svg viewBox="0 0 420 140" style={{width:'100%', background:'#0f1727', border:'1px solid #334155', borderRadius:8}}>
+              {(() => {
+                const pts = analytics.series || [];
+                if (!pts.length) return null;
+                const min = Math.min(...pts.map(p => p.value));
+                const max = Math.max(...pts.map(p => p.value));
+                const span = Math.max(max - min, 1);
+                const path = pts.map((p, i) => {
+                  const x = (i / Math.max(pts.length - 1, 1)) * 400 + 10;
+                  const y = 120 - ((p.value - min) / span) * 100;
+                  return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                }).join(' ');
+                return <path d={path} fill="none" stroke="#22c55e" strokeWidth="2" />;
+              })()}
+            </svg>
+          </div>
+          <div>
+            <h3>Allocation</h3>
+            {(analytics.allocation || []).slice(0, 8).map((a) => (
+              <div key={a.ticker} style={{marginBottom:8}}>
+                <div style={{display:'flex', justifyContent:'space-between'}}><span>{a.ticker}</span><span>{a.weight_pct}%</span></div>
+                <div style={{height:8, background:'#1f2937', borderRadius:4}}><div style={{height:8, width:`${Math.min(100, a.weight_pct)}%`, background:'#3b82f6', borderRadius:4}} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-2" style={{marginTop: 12}}>
+          <div>
+            <h3>Top Gainers</h3>
+            <ul>{(analytics.top_gainers || []).map(g => <li key={`g-${g.ticker}`}>{g.ticker}: <span className="pos">${g.unrealized_pnl} ({g.unrealized_pnl_pct}%)</span></li>)}</ul>
+          </div>
+          <div>
+            <h3>Top Losers</h3>
+            <ul>{(analytics.top_losers || []).map(l => <li key={`l-${l.ticker}`}>{l.ticker}: <span className="neg">${l.unrealized_pnl} ({l.unrealized_pnl_pct}%)</span></li>)}</ul>
+          </div>
         </div>
       </div>
 

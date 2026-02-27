@@ -10,6 +10,7 @@ Single-user local portfolio tracker (FIFO) with dark desktop UI.
 - FIFO position and cost-basis computation
 - Dashboard with selected + combined totals/P&L
 - 30-day snapshot mini trend chart
+- Analytics section with period filters (1W/1M/3M/6M/1Y/ALL), P&L curve, allocation bars, top gainers/losers
 - Last close prices from Yahoo Finance (no intraday stream)
 - SPY/QQQ 1Y benchmark comparison
 - End-of-day snapshot scheduler (4:05 PM ET)
