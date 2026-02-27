@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+import yfinance as yf
 
 from .config import settings
 from .db import Base, engine, get_db, SessionLocal
@@ -387,6 +388,67 @@ def analytics(portfolio_id: int = Query(default=None), period: str = Query("1M")
             "top_losers": losers,
         },
     }
+
+
+@app.get("/api/v1/analytics/compare")
+def analytics_compare(period: str = Query("3M"), db: Session = Depends(get_db)):
+    period_map = {"1W": 7, "1M": 30, "3M": 90, "6M": 180, "1Y": 365, "ALL": 730}
+    days = period_map.get(period.upper(), 90)
+
+    def ticker_series(ticker: str):
+        try:
+            h = yf.Ticker(ticker).history(period=f"{max(days, 7)}d")
+            if h is None or len(h) < 2:
+                return []
+            closes = h["Close"].dropna()
+            if len(closes) < 2:
+                return []
+            base = float(closes.iloc[0])
+            return [{"date": idx.date().isoformat(), "value": round(float(v) / base * 100, 2)} for idx, v in closes.items()]
+        except Exception:
+            return []
+
+    portfolios = db.scalars(select(Portfolio).order_by(Portfolio.id.asc())).all()
+    out = []
+    for p in portfolios:
+        pos = compute_positions(db, p.id)
+        pos = [x for x in pos if float(x.get("current_value", 0)) > 0]
+        total = sum(float(x["current_value"]) for x in pos) or 1.0
+
+        per_symbol = []
+        for x in pos:
+            t = x["ticker"]
+            s = ticker_series(t)
+            if s:
+                per_symbol.append({
+                    "ticker": t,
+                    "weight": round(float(x["current_value"]) / total, 6),
+                    "series": s,
+                })
+
+        if not per_symbol:
+            out.append({"portfolio_id": p.id, "portfolio_name": p.name, "symbols": [], "overlay": []})
+            continue
+
+        all_dates = sorted({pt["date"] for sym in per_symbol for pt in sym["series"]})
+        overlay = []
+        for d in all_dates:
+            v = 0.0
+            for sym in per_symbol:
+                points = [pt for pt in sym["series"] if pt["date"] <= d]
+                if not points:
+                    continue
+                v += sym["weight"] * float(points[-1]["value"])
+            overlay.append({"date": d, "value": round(v, 2)})
+
+        out.append({
+            "portfolio_id": p.id,
+            "portfolio_name": p.name,
+            "symbols": [{"ticker": s["ticker"], "series": s["series"]} for s in per_symbol],
+            "overlay": overlay,
+        })
+
+    return {"status": "success", "data": {"period": period.upper(), "portfolios": out}}
 
 
 @app.post("/api/v1/snapshot/run")

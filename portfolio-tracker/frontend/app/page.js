@@ -22,12 +22,26 @@ export default function Page() {
   const [snapshots, setSnapshots] = useState([]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('1M');
   const [analytics, setAnalytics] = useState({ series: [], allocation: [], top_gainers: [], top_losers: [] });
+  const [compare, setCompare] = useState({ period: '3M', portfolios: [] });
   const [newPortfolio, setNewPortfolio] = useState('');
   const [renamePortfolio, setRenamePortfolio] = useState('');
   const [editTx, setEditTx] = useState(null);
   const [undoId, setUndoId] = useState(null);
   const [form, setForm] = useState({ ticker: '', transaction_type: 'BUY', quantity: '', price_per_share: '', fees: '0', executed_at: new Date().toISOString().slice(0,16), notes: '' });
   const [error, setError] = useState('');
+  const colors = ['#60a5fa', '#f59e0b', '#22c55e', '#ef4444', '#a78bfa', '#14b8a6', '#f472b6', '#84cc16'];
+
+  function toPath(points, width = 500, height = 140, pad = 10) {
+    if (!points?.length) return '';
+    const min = Math.min(...points.map(p => p.value));
+    const max = Math.max(...points.map(p => p.value));
+    const span = Math.max(max - min, 1);
+    return points.map((p, i) => {
+      const x = (i / Math.max(points.length - 1, 1)) * (width - pad * 2) + pad;
+      const y = (height - pad) - ((p.value - min) / span) * (height - pad * 2);
+      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+  }
 
   async function loadPortfolios() {
     const r = await api('/api/v1/portfolios');
@@ -41,7 +55,7 @@ export default function Page() {
   async function loadData(pid = portfolioId) {
     if (!pid) return;
     const q = `?portfolio_id=${pid}`;
-    const [d, p, t, c, a, s, an] = await Promise.all([
+    const [d, p, t, c, a, s, an, cmp] = await Promise.all([
       api(`/api/v1/dashboard${q}`),
       api(`/api/v1/positions${q}`),
       api(`/api/v1/transactions${q}`),
@@ -49,6 +63,7 @@ export default function Page() {
       api('/api/v1/activity?limit=10'),
       api(`/api/v1/snapshots${q}&days=30`),
       api(`/api/v1/analytics${q}&period=${analyticsPeriod}`),
+      api(`/api/v1/analytics/compare?period=${analyticsPeriod}`),
     ]);
     setDashboard(d.data);
     setPositions(p.data || []);
@@ -57,6 +72,7 @@ export default function Page() {
     setActivity(a.data || []);
     setSnapshots(s.data || []);
     setAnalytics(an.data || { series: [], allocation: [], top_gainers: [], top_losers: [] });
+    setCompare(cmp.data || { period: analyticsPeriod, portfolios: [] });
   }
 
   useEffect(() => { loadPortfolios().catch(e => setError(e.message)); }, []);
@@ -168,6 +184,30 @@ export default function Page() {
 
       {error && <div className="card neg">{error}</div>}
       {undoId && <div className="card">Transaction deleted. <button onClick={undoDelete}>Undo</button></div>}
+
+      <div className="card">
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <h2>Portfolio vs Symbols ({analyticsPeriod})</h2>
+          <div style={{fontSize:12, opacity:0.8}}>Overlay = weighted portfolio line (100 base)</div>
+        </div>
+        <div className="grid grid-2">
+          {(compare.portfolios || []).map((pf) => (
+            <div key={pf.portfolio_id} className="card" style={{padding:12}}>
+              <h3 style={{marginTop:0}}>{pf.portfolio_name}</h3>
+              <svg viewBox="0 0 500 140" style={{width:'100%', background:'#0f1727', border:'1px solid #334155', borderRadius:8}}>
+                {(pf.symbols || []).map((s, idx) => (
+                  <path key={s.ticker} d={toPath(s.series)} fill="none" stroke={colors[idx % colors.length]} strokeWidth="1.8" />
+                ))}
+                {!!pf.overlay?.length && <path d={toPath(pf.overlay)} fill="none" stroke="#ffffff" strokeWidth="2.4" />}
+              </svg>
+              <div style={{display:'flex', gap:10, flexWrap:'wrap', marginTop:8, fontSize:12}}>
+                {(pf.symbols || []).map((s, idx) => <span key={`l-${pf.portfolio_id}-${s.ticker}`}><span style={{color:colors[idx % colors.length]}}>●</span> {s.ticker}</span>)}
+                {!!pf.overlay?.length && <span><span style={{color:'#fff'}}>●</span> OVERALL</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="card grid grid-2">
         <div>
