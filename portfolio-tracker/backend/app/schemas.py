@@ -23,6 +23,20 @@ class TransactionOut(BaseModel):
     notes: str
 
 
+class PortfolioCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    initial_cash: float = 0
+
+
+class TransactionUpdate(BaseModel):
+    transaction_type: str
+    quantity: float = Field(gt=0)
+    price_per_share: float = Field(gt=0)
+    fees: float = 0
+    executed_at: datetime
+    notes: str = ""
+
+
 class PositionOut(BaseModel):
     ticker: str
     quantity: float

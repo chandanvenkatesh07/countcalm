@@ -9,9 +9,9 @@ from .services import get_or_create_stock
 def run():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
-    p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
+    p = db.scalar(select(Portfolio).where(Portfolio.name == "Personal"))
     if not p:
-        p = Portfolio(name="Main", initial_cash=10000)
+        p = Portfolio(name="Personal", initial_cash=10000)
         db.add(p)
         db.commit()
         db.refresh(p)

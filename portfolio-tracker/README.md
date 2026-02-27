@@ -4,6 +4,8 @@ Single-user local portfolio tracker (FIFO) with dark desktop UI.
 
 ## Features in this MVP
 - Add BUY/SELL trades
+- Edit/Delete entered trades
+- Multiple portfolio groups (e.g., 401K / Personal / ESPP)
 - FIFO position and cost-basis computation
 - Dashboard with total value and unrealized P&L
 - Last close prices from Yahoo Finance (no intraday stream)

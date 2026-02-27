@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -11,25 +11,35 @@ from apscheduler.triggers.cron import CronTrigger
 from .config import settings
 from .db import Base, engine, get_db, SessionLocal
 from .models import Portfolio, Transaction
-from .schemas import TransactionCreate, TransactionOut
+from .schemas import TransactionCreate, PortfolioCreate, TransactionUpdate
 from .services import get_or_create_stock, refresh_all_closes, compute_positions, dashboard_summary, create_daily_snapshot
 
 scheduler = BackgroundScheduler(timezone="America/New_York")
 
 
 def ensure_seed(db: Session):
-    p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
+    p = db.scalar(select(Portfolio).where(Portfolio.name == "Personal"))
     if not p:
-        db.add(Portfolio(name="Main", initial_cash=0))
+        db.add(Portfolio(name="Personal", initial_cash=0))
         db.commit()
+
+
+def get_portfolio_or_404(db: Session, portfolio_id: int | None):
+    if portfolio_id is None:
+        p = db.scalar(select(Portfolio).order_by(Portfolio.id.asc()))
+    else:
+        p = db.get(Portfolio, portfolio_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    return p
 
 
 def end_of_day_jobs():
     db = SessionLocal()
     try:
         refresh_all_closes(db)
-        p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
-        if p:
+        portfolios = db.scalars(select(Portfolio)).all()
+        for p in portfolios:
             create_daily_snapshot(db, p.id)
     finally:
         db.close()
@@ -66,18 +76,30 @@ def health():
     return {"status": "ok", "time": datetime.utcnow().isoformat()}
 
 
-@app.get("/api/v1/portfolio")
-def get_portfolio(db: Session = Depends(get_db)):
-    p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
-    return {"id": p.id, "name": p.name, "initial_cash": float(p.initial_cash)}
+@app.get("/api/v1/portfolios")
+def list_portfolios(db: Session = Depends(get_db)):
+    rows = db.scalars(select(Portfolio).order_by(Portfolio.id.asc())).all()
+    return {"status": "success", "data": [{"id": p.id, "name": p.name, "initial_cash": float(p.initial_cash)} for p in rows]}
+
+
+@app.post("/api/v1/portfolios")
+def create_portfolio(payload: PortfolioCreate, db: Session = Depends(get_db)):
+    exists = db.scalar(select(Portfolio).where(Portfolio.name == payload.name.strip()))
+    if exists:
+        raise HTTPException(status_code=400, detail="Portfolio already exists")
+    p = Portfolio(name=payload.name.strip(), initial_cash=payload.initial_cash)
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+    return {"status": "success", "data": {"id": p.id, "name": p.name}}
 
 
 @app.post("/api/v1/transactions")
-def add_transaction(payload: TransactionCreate, db: Session = Depends(get_db)):
+def add_transaction(payload: TransactionCreate, portfolio_id: int = Query(default=None), db: Session = Depends(get_db)):
     tx_type = payload.transaction_type.upper().strip()
     if tx_type not in {"BUY", "SELL"}:
         raise HTTPException(status_code=400, detail="transaction_type must be BUY or SELL")
-    p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
+    p = get_portfolio_or_404(db, portfolio_id)
     stock = get_or_create_stock(db, payload.ticker)
 
     if tx_type == "SELL":
@@ -99,13 +121,41 @@ def add_transaction(payload: TransactionCreate, db: Session = Depends(get_db)):
     db.add(tx)
     db.commit()
     db.refresh(tx)
-
     return {"status": "success", "data": {"id": tx.id}}
 
 
+@app.put("/api/v1/transactions/{tx_id}")
+def edit_transaction(tx_id: int, payload: TransactionUpdate, db: Session = Depends(get_db)):
+    tx = db.get(Transaction, tx_id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    tx_type = payload.transaction_type.upper().strip()
+    if tx_type not in {"BUY", "SELL"}:
+        raise HTTPException(status_code=400, detail="transaction_type must be BUY or SELL")
+
+    tx.transaction_type = tx_type
+    tx.quantity = payload.quantity
+    tx.price_per_share = payload.price_per_share
+    tx.fees = payload.fees
+    tx.executed_at = payload.executed_at
+    tx.notes = payload.notes
+    db.commit()
+    return {"status": "success"}
+
+
+@app.delete("/api/v1/transactions/{tx_id}")
+def delete_transaction(tx_id: int, db: Session = Depends(get_db)):
+    tx = db.get(Transaction, tx_id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    db.delete(tx)
+    db.commit()
+    return {"status": "success"}
+
+
 @app.get("/api/v1/transactions")
-def list_transactions(db: Session = Depends(get_db)):
-    p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
+def list_transactions(portfolio_id: int = Query(default=None), db: Session = Depends(get_db)):
+    p = get_portfolio_or_404(db, portfolio_id)
     txs = db.scalars(
         select(Transaction).where(Transaction.portfolio_id == p.id).order_by(Transaction.executed_at.desc(), Transaction.id.desc())
     ).all()
@@ -126,21 +176,21 @@ def list_transactions(db: Session = Depends(get_db)):
 
 
 @app.get("/api/v1/positions")
-def positions(db: Session = Depends(get_db)):
-    p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
+def positions(portfolio_id: int = Query(default=None), db: Session = Depends(get_db)):
+    p = get_portfolio_or_404(db, portfolio_id)
     refresh_all_closes(db)
     return {"status": "success", "data": compute_positions(db, p.id)}
 
 
 @app.get("/api/v1/dashboard")
-def dashboard(db: Session = Depends(get_db)):
-    p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
+def dashboard(portfolio_id: int = Query(default=None), db: Session = Depends(get_db)):
+    p = get_portfolio_or_404(db, portfolio_id)
     refresh_all_closes(db)
     return {"status": "success", "data": dashboard_summary(db, p.id)}
 
 
 @app.post("/api/v1/snapshot/run")
-def run_snapshot(db: Session = Depends(get_db)):
-    p = db.scalar(select(Portfolio).where(Portfolio.name == "Main"))
+def run_snapshot(portfolio_id: int = Query(default=None), db: Session = Depends(get_db)):
+    p = get_portfolio_or_404(db, portfolio_id)
     create_daily_snapshot(db, p.id)
     return {"status": "success"}

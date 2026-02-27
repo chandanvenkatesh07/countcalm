@@ -5,27 +5,49 @@ import { useEffect, useState } from 'react';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function Page() {
+  const [portfolios, setPortfolios] = useState([]);
+  const [portfolioId, setPortfolioId] = useState('');
   const [dashboard, setDashboard] = useState(null);
   const [positions, setPositions] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [newPortfolio, setNewPortfolio] = useState('');
   const [form, setForm] = useState({ ticker: '', transaction_type: 'BUY', quantity: '', price_per_share: '', fees: '0', executed_at: new Date().toISOString().slice(0,16), notes: '' });
 
-  async function load() {
+  async function loadPortfolios() {
+    const r = await fetch(`${API}/api/v1/portfolios`).then(x => x.json());
+    setPortfolios(r.data || []);
+    if (!portfolioId && r.data?.length) setPortfolioId(String(r.data[0].id));
+  }
+
+  async function loadData(pid = portfolioId) {
+    if (!pid) return;
+    const q = `?portfolio_id=${pid}`;
     const [d, p, t] = await Promise.all([
-      fetch(`${API}/api/v1/dashboard`).then(r => r.json()),
-      fetch(`${API}/api/v1/positions`).then(r => r.json()),
-      fetch(`${API}/api/v1/transactions`).then(r => r.json()),
+      fetch(`${API}/api/v1/dashboard${q}`).then(r => r.json()),
+      fetch(`${API}/api/v1/positions${q}`).then(r => r.json()),
+      fetch(`${API}/api/v1/transactions${q}`).then(r => r.json()),
     ]);
     setDashboard(d.data);
     setPositions(p.data || []);
     setTransactions(t.data || []);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadPortfolios(); }, []);
+  useEffect(() => { if (portfolioId) loadData(portfolioId); }, [portfolioId]);
+
+  async function createPortfolio() {
+    if (!newPortfolio.trim()) return;
+    await fetch(`${API}/api/v1/portfolios`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newPortfolio.trim(), initial_cash: 0 })
+    });
+    setNewPortfolio('');
+    await loadPortfolios();
+  }
 
   async function submit(e) {
     e.preventDefault();
-    await fetch(`${API}/api/v1/transactions`, {
+    await fetch(`${API}/api/v1/transactions?portfolio_id=${portfolioId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -37,12 +59,52 @@ export default function Page() {
       })
     });
     setForm({ ...form, ticker: '', quantity: '', price_per_share: '', notes: '' });
-    await load();
+    await loadData();
+  }
+
+  async function deleteTx(id) {
+    await fetch(`${API}/api/v1/transactions/${id}`, { method: 'DELETE' });
+    await loadData();
+  }
+
+  async function editTx(tx) {
+    const quantity = prompt('Quantity', String(tx.quantity));
+    if (!quantity) return;
+    const price = prompt('Price per share', String(tx.price_per_share));
+    if (!price) return;
+    await fetch(`${API}/api/v1/transactions/${tx.id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transaction_type: tx.transaction_type,
+        quantity: Number(quantity),
+        price_per_share: Number(price),
+        fees: Number(tx.fees || 0),
+        executed_at: new Date(tx.executed_at).toISOString(),
+        notes: tx.notes || ''
+      })
+    });
+    await loadData();
   }
 
   return (
     <div className="container grid" style={{gap: 24}}>
       <h1>Portfolio Tracker MVP</h1>
+
+      <div className="card grid grid-2">
+        <div>
+          <div style={{marginBottom: 8}}>Portfolio</div>
+          <select value={portfolioId} onChange={e => setPortfolioId(e.target.value)}>
+            {portfolios.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{marginBottom: 8}}>Create Portfolio Group</div>
+          <div style={{display:'flex', gap: 8}}>
+            <input placeholder="401K / Personal / ESPP" value={newPortfolio} onChange={e => setNewPortfolio(e.target.value)} />
+            <button onClick={createPortfolio}>Add</button>
+          </div>
+        </div>
+      </div>
 
       {dashboard && (
         <div className="grid grid-3">
@@ -79,9 +141,19 @@ export default function Page() {
 
       <div className="card">
         <h2>Recent Transactions</h2>
-        <table><thead><tr><th>Date</th><th>Ticker</th><th>Type</th><th>Qty</th><th>Price</th></tr></thead><tbody>
-          {transactions.slice(0, 15).map(t => (
-            <tr key={t.id}><td>{new Date(t.executed_at).toLocaleString()}</td><td>{t.ticker}</td><td>{t.transaction_type}</td><td>{t.quantity}</td><td>${t.price_per_share}</td></tr>
+        <table><thead><tr><th>Date</th><th>Ticker</th><th>Type</th><th>Qty</th><th>Price</th><th>Actions</th></tr></thead><tbody>
+          {transactions.slice(0, 25).map(t => (
+            <tr key={t.id}>
+              <td>{new Date(t.executed_at).toLocaleString()}</td>
+              <td>{t.ticker}</td>
+              <td>{t.transaction_type}</td>
+              <td>{t.quantity}</td>
+              <td>${t.price_per_share}</td>
+              <td style={{display:'flex', gap:8}}>
+                <button onClick={() => editTx(t)}>Edit</button>
+                <button onClick={() => deleteTx(t.id)}>Delete</button>
+              </td>
+            </tr>
           ))}
         </tbody></table>
       </div>
