@@ -29,6 +29,7 @@ class PortfolioCreate(BaseModel):
 
 
 class TransactionUpdate(BaseModel):
+    ticker: str = Field(min_length=1, max_length=10)
     transaction_type: str
     quantity: float = Field(gt=0)
     price_per_share: float = Field(gt=0)

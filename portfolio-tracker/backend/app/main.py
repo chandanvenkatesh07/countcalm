@@ -133,6 +133,8 @@ def edit_transaction(tx_id: int, payload: TransactionUpdate, db: Session = Depen
     if tx_type not in {"BUY", "SELL"}:
         raise HTTPException(status_code=400, detail="transaction_type must be BUY or SELL")
 
+    stock = get_or_create_stock(db, payload.ticker)
+    tx.stock_id = stock.id
     tx.transaction_type = tx_type
     tx.quantity = payload.quantity
     tx.price_per_share = payload.price_per_share

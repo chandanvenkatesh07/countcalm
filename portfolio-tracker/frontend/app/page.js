@@ -63,24 +63,38 @@ export default function Page() {
   }
 
   async function deleteTx(id) {
+    if (!confirm('Delete this transaction? This cannot be undone.')) return;
     await fetch(`${API}/api/v1/transactions/${id}`, { method: 'DELETE' });
     await loadData();
   }
 
   async function editTx(tx) {
+    const ticker = prompt('Ticker', String(tx.ticker || ''));
+    if (!ticker) return;
+    const transaction_type = prompt('Type (BUY/SELL)', String(tx.transaction_type || 'BUY'));
+    if (!transaction_type) return;
     const quantity = prompt('Quantity', String(tx.quantity));
     if (!quantity) return;
     const price = prompt('Price per share', String(tx.price_per_share));
     if (!price) return;
+    const fees = prompt('Fees', String(tx.fees || 0));
+    if (fees === null) return;
+    const dtDefault = new Date(tx.executed_at).toISOString().slice(0, 16);
+    const executed_at = prompt('Executed at (YYYY-MM-DDTHH:mm)', dtDefault);
+    if (!executed_at) return;
+    const notes = prompt('Notes', String(tx.notes || ''));
+    if (notes === null) return;
+
     await fetch(`${API}/api/v1/transactions/${tx.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        transaction_type: tx.transaction_type,
+        ticker: ticker.toUpperCase(),
+        transaction_type: transaction_type.toUpperCase(),
         quantity: Number(quantity),
         price_per_share: Number(price),
-        fees: Number(tx.fees || 0),
-        executed_at: new Date(tx.executed_at).toISOString(),
-        notes: tx.notes || ''
+        fees: Number(fees || 0),
+        executed_at: new Date(executed_at).toISOString(),
+        notes: notes || ''
       })
     });
     await loadData();
