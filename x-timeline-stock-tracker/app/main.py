@@ -213,12 +213,11 @@ class ScrapedRecord:
     tickers: list[str]
 
 
-async def run_playwright_scrape(max_tweets: int, watermark: Optional[str], max_age_days: int = 7) -> list[ScrapedRecord]:
+async def run_playwright_scrape(max_tweets: int, watermark: Optional[str]) -> list[ScrapedRecord]:
     from playwright.async_api import async_playwright
 
     scraped: list[ScrapedRecord] = []
     seen_ids: set[str] = set()
-    cutoff_ts = utcnow().timestamp() - (max_age_days * 86400)
 
     async with async_playwright() as p:
         browser_kwargs = dict(
@@ -274,22 +273,6 @@ async def run_playwright_scrape(max_tweets: int, watermark: Optional[str], max_a
                     if watermark and tid == watermark:
                         await context.close()
                         return scraped
-
-                    # Stop once timeline is older than max_age_days (works best with Following tab)
-                    time_loc = art.locator("time").first
-                    tweet_time_iso = None
-                    tweet_ts = None
-                    if await time_loc.count():
-                        tweet_time_iso = await time_loc.get_attribute("datetime")
-                        if tweet_time_iso:
-                            try:
-                                tweet_ts = datetime.fromisoformat(tweet_time_iso.replace("Z", "+00:00")).timestamp()
-                            except Exception:
-                                tweet_ts = None
-                    if tweet_ts is not None and tweet_ts < cutoff_ts:
-                        await context.close()
-                        return scraped
-
                     seen_ids.add(tid)
 
                     txt_loc = art.locator("[data-testid='tweetText']")
@@ -358,7 +341,7 @@ async def run_playwright_scrape(max_tweets: int, watermark: Optional[str], max_a
                         url=f"https://x.com{href}" if href.startswith("/") else href,
                         author_handle=author or "@unknown",
                         author_display_name=name or "Unknown",
-                        timestamp=tweet_time_iso or utcnow().isoformat(),
+                        timestamp=utcnow().isoformat(),
                         likes=0,
                         retweets=0,
                         replies=0,
@@ -416,9 +399,9 @@ def dashboard(request: Request, session: Session = Depends(get_session)):
 
 
 @app.post("/api/scrape/trigger")
-async def scrape_trigger(max_tweets: int = Form(120), max_age_days: int = Form(7), session: Session = Depends(get_session)):
+async def scrape_trigger(max_tweets: int = Form(120), session: Session = Depends(get_session)):
     state = session.get(ScrapeState, "singleton")
-    records = await run_playwright_scrape(max_tweets=max_tweets, watermark=state.last_tweet_id, max_age_days=max_age_days)
+    records = await run_playwright_scrape(max_tweets=max_tweets, watermark=state.last_tweet_id)
     ingested = 0
     newest_id = state.last_tweet_id
     for r in records:
