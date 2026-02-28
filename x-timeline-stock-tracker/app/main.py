@@ -247,13 +247,36 @@ async def run_playwright_scrape(max_tweets: int, watermark: Optional[str], max_a
                 break
             await asyncio.sleep(1)
 
+        # Force chronological timeline: switch to Following tab
+        following_ok = False
         try:
-            following = page.get_by_text("Following")
-            if await following.count() > 0:
-                await following.first.click(timeout=2000)
-                await asyncio.sleep(1)
+            # Best target: tab role with accessible name
+            following_tab = page.get_by_role("tab", name=re.compile(r"^Following$", re.I))
+            if await following_tab.count() > 0:
+                tab = following_tab.first
+                selected = (await tab.get_attribute("aria-selected")) == "true"
+                if not selected:
+                    await tab.click(timeout=3000)
+                    await asyncio.sleep(1)
+                selected = (await tab.get_attribute("aria-selected")) == "true"
+                following_ok = bool(selected)
         except Exception:
-            pass
+            following_ok = False
+
+        if not following_ok:
+            try:
+                # Fallback text click in case role mapping changes
+                following = page.get_by_text("Following", exact=True)
+                if await following.count() > 0:
+                    await following.first.click(timeout=3000)
+                    await asyncio.sleep(1)
+                    following_ok = True
+            except Exception:
+                following_ok = False
+
+        if not following_ok:
+            await context.close()
+            raise RuntimeError("Could not switch to Following tab. Aborting scrape to avoid For You timeline.")
 
         while len(scraped) < max_tweets:
             articles = page.locator("article[data-testid='tweet']")
