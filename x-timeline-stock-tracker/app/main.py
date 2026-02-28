@@ -258,89 +258,103 @@ async def run_playwright_scrape(max_tweets: int, watermark: Optional[str]) -> li
             articles = page.locator("article[data-testid='tweet']")
             count = await articles.count()
             for i in range(count):
-                art = articles.nth(i)
-                link = art.locator("a[href*='/status/']").first
-                href = await link.get_attribute("href") if await link.count() else None
-                if not href:
-                    continue
-                m = re.search(r"/status/(\d+)", href)
-                if not m:
-                    continue
-                tid = m.group(1)
-                if tid in seen_ids:
-                    continue
-                if watermark and tid == watermark:
-                    await context.close()
-                    return scraped
-                seen_ids.add(tid)
-
-                txt_loc = art.locator("[data-testid='tweetText']")
-                text = (await txt_loc.inner_text()) if await txt_loc.count() else ""
-                tickers = find_tickers(text)
-                if not tickers:
-                    continue
-
-                author = ""
-                name = ""
-                # robust-enough parse fallback
-                handles = re.findall(r"@([A-Za-z0-9_]{1,15})", await art.inner_text())
-                if handles:
-                    author = "@" + handles[0]
-                names = re.findall(r"^(.+?)\n@", await art.inner_text(), re.M)
-                if names:
-                    name = names[0].strip()
-
-                shot_path = None
                 try:
-                    bb = await art.bounding_box()
-                    if bb:
-                        png = await page.screenshot(clip=bb)
-                        ticker_dir = IMG_DIR / tickers[0]
-                        ticker_dir.mkdir(parents=True, exist_ok=True)
-                        shot_file = ticker_dir / f"{tid}_screenshot.png"
-                        shot_file.write_bytes(png)
-                        shot_path = str(shot_file.relative_to(BASE_DIR))
-                except Exception:
-                    pass
-
-                images: list[str] = []
-                media = art.locator("img")
-                mc = await media.count()
-                for mi in range(mc):
-                    src = await media.nth(mi).get_attribute("src")
-                    if not src or "profile_images" in src:
+                    art = articles.nth(i)
+                    link = art.locator("a[href*='/status/']").first
+                    href = await link.get_attribute("href") if await link.count() else None
+                    if not href:
                         continue
-                    try:
-                        import httpx
+                    m = re.search(r"/status/(\d+)", href)
+                    if not m:
+                        continue
+                    tid = m.group(1)
+                    if tid in seen_ids:
+                        continue
+                    if watermark and tid == watermark:
+                        await context.close()
+                        return scraped
+                    seen_ids.add(tid)
 
-                        resp = httpx.get(src, timeout=10)
-                        if resp.status_code == 200 and resp.content:
-                            ext = ".jpg"
+                    txt_loc = art.locator("[data-testid='tweetText']")
+                    text = ""
+                    try:
+                        tc = await txt_loc.count()
+                        if tc == 1:
+                            text = await txt_loc.first.inner_text()
+                        elif tc > 1:
+                            parts = [t.strip() for t in await txt_loc.all_inner_texts() if t.strip()]
+                            text = "\n".join(parts)
+                    except Exception:
+                        text = ""
+                    tickers = find_tickers(text)
+                    if not tickers:
+                        continue
+
+                    author = ""
+                    name = ""
+                    # robust-enough parse fallback
+                    art_text = await art.inner_text()
+                    handles = re.findall(r"@([A-Za-z0-9_]{1,15})", art_text)
+                    if handles:
+                        author = "@" + handles[0]
+                    names = re.findall(r"^(.+?)\n@", art_text, re.M)
+                    if names:
+                        name = names[0].strip()
+
+                    shot_path = None
+                    try:
+                        bb = await art.bounding_box()
+                        if bb:
+                            png = await page.screenshot(clip=bb)
                             ticker_dir = IMG_DIR / tickers[0]
                             ticker_dir.mkdir(parents=True, exist_ok=True)
-                            file = ticker_dir / f"{tid}_img{mi+1}{ext}"
-                            file.write_bytes(resp.content)
-                            images.append(str(file.relative_to(BASE_DIR)))
+                            shot_file = ticker_dir / f"{tid}_screenshot.png"
+                            shot_file.write_bytes(png)
+                            shot_path = str(shot_file.relative_to(BASE_DIR))
                     except Exception:
-                        continue
+                        pass
 
-                rec = ScrapedRecord(
-                    tweet_id=tid,
-                    text=text,
-                    url=f"https://x.com{href}" if href.startswith("/") else href,
-                    author_handle=author or "@unknown",
-                    author_display_name=name or "Unknown",
-                    timestamp=utcnow().isoformat(),
-                    likes=0,
-                    retweets=0,
-                    replies=0,
-                    screenshot_path=shot_path,
-                    image_paths=images,
-                    tickers=tickers,
-                )
-                scraped.append(rec)
-                if len(scraped) >= max_tweets:
-                    break
+                    images: list[str] = []
+                    media = art.locator("img")
+                    mc = await media.count()
+                    for mi in range(mc):
+                        src = await media.nth(mi).get_attribute("src")
+                        if not src or "profile_images" in src:
+                            continue
+                        try:
+                            import httpx
+
+                            resp = httpx.get(src, timeout=10)
+                            if resp.status_code == 200 and resp.content:
+                                ext = ".jpg"
+                                ticker_dir = IMG_DIR / tickers[0]
+                                ticker_dir.mkdir(parents=True, exist_ok=True)
+                                file = ticker_dir / f"{tid}_img{mi+1}{ext}"
+                                file.write_bytes(resp.content)
+                                images.append(str(file.relative_to(BASE_DIR)))
+                        except Exception:
+                            continue
+
+                    rec = ScrapedRecord(
+                        tweet_id=tid,
+                        text=text,
+                        url=f"https://x.com{href}" if href.startswith("/") else href,
+                        author_handle=author or "@unknown",
+                        author_display_name=name or "Unknown",
+                        timestamp=utcnow().isoformat(),
+                        likes=0,
+                        retweets=0,
+                        replies=0,
+                        screenshot_path=shot_path,
+                        image_paths=images,
+                        tickers=tickers,
+                    )
+                    scraped.append(rec)
+                    if len(scraped) >= max_tweets:
+                        break
+                except Exception:
+                    # Skip malformed/ephemeral timeline cards without killing the scrape run
+                    continue
 
             await page.mouse.wheel(0, random.randint(1000, 1800))
             await asyncio.sleep(random.uniform(0.8, 1.7))
