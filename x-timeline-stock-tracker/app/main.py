@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import yfinance as yf
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -422,23 +422,10 @@ def _startup():
 
 
 @app.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, author: Optional[str] = None, session: Session = Depends(get_session)):
+def dashboard(request: Request, session: Session = Depends(get_session)):
     running = session.exec(select(RunningTracker).where(RunningTracker.status != "DISMISSED")).all()
     primary = session.exec(select(PrimaryTracker).where(PrimaryTracker.status != "ARCHIVED")).all()
     state = session.get(ScrapeState, "singleton")
-
-    all_authors = sorted({t.author_handle for t in session.exec(select(ScrapedTweet)).all() if t.author_handle})
-    if author:
-        running = [r for r in running if author in set(json.loads(r.unique_sources))]
-        filtered_primary: list[PrimaryTracker] = []
-        for p in primary:
-            linked = session.get(RunningTracker, p.running_tracker_id)
-            if not linked:
-                continue
-            if author in set(json.loads(linked.unique_sources)):
-                filtered_primary.append(p)
-        primary = filtered_primary
-
     return templates.TemplateResponse(
         "index.html",
         {
@@ -447,8 +434,6 @@ def dashboard(request: Request, author: Optional[str] = None, session: Session =
             "primary": primary,
             "state": state,
             "json": json,
-            "authors": all_authors,
-            "selected_author": author or "",
         },
     )
 
@@ -643,38 +628,6 @@ def analyze_primary(primary_id: str, session: Session = Depends(get_session)):
 @app.get("/api/primary/{primary_id}/analysis-history")
 def analysis_history(primary_id: str, session: Session = Depends(get_session)):
     return session.exec(select(AnalysisResult).where(AnalysisResult.primary_tracker_id == primary_id)).all()
-
-
-@app.post("/api/reset/running")
-def reset_running(session: Session = Depends(get_session)):
-    for r in session.exec(select(RunningTracker)).all():
-        session.delete(r)
-    for t in session.exec(select(ScrapedTweet)).all():
-        session.delete(t)
-    state = session.get(ScrapeState, "singleton")
-    state.last_tweet_id = None
-    state.last_tweet_timestamp = None
-    state.last_scrape_at = None
-    state.tweets_scraped_count = 0
-    state.tickers_found_count = 0
-    session.add(state)
-    session.commit()
-    return RedirectResponse(url="/", status_code=303)
-
-
-@app.post("/api/reset/primary")
-def reset_primary(session: Session = Depends(get_session)):
-    for p in session.exec(select(PrimaryTracker)).all():
-        session.delete(p)
-    for r in session.exec(select(RunningTracker)).all():
-        r.status = "ACTIVE"
-        r.promoted_at = None
-        r.primary_tracker_id = None
-        session.add(r)
-    for a in session.exec(select(AnalysisResult)).all():
-        session.delete(a)
-    session.commit()
-    return RedirectResponse(url="/", status_code=303)
 
 
 @app.post("/api/prices/refresh")
