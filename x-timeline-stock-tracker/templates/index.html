@@ -13,7 +13,7 @@
         <h1 class="text-3xl font-bold">X Timeline Stock Tracker</h1>
         <p class="text-slate-400">Last scrape: {{ state.last_scrape_at or 'never' }} | Last watermark: {{ state.last_tweet_id or 'none' }}</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 items-center">
         <form action="/api/scrape/trigger" method="post">
           <input type="hidden" name="max_tweets" value="120" />
           <input type="hidden" name="max_age_days" value="7" />
@@ -22,7 +22,27 @@
         <form action="/api/prices/refresh" method="post">
           <button class="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-600">Refresh Prices</button>
         </form>
+        <form action="/api/reset/running" method="post" onsubmit="return confirm('Reset Running (follow feed) data?');">
+          <button class="px-4 py-2 rounded-lg bg-rose-700 hover:bg-rose-600">Reset Following</button>
+        </form>
+        <form action="/api/reset/primary" method="post" onsubmit="return confirm('Reset Main (primary watchlist) data?');">
+          <button class="px-4 py-2 rounded-lg bg-amber-700 hover:bg-amber-600">Reset Main</button>
+        </form>
       </div>
+    </div>
+
+    <div class="mb-6">
+      <form method="get" action="/" class="flex gap-2 items-center">
+        <label class="text-sm text-slate-300">Filter by user:</label>
+        <select name="author" class="bg-slate-900 border border-slate-700 rounded px-2 py-1">
+          <option value="">All users</option>
+          {% for a in authors %}
+          <option value="{{a}}" {% if selected_author==a %}selected{% endif %}>{{a}}</option>
+          {% endfor %}
+        </select>
+        <button class="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Apply</button>
+        <a href="/" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700">Clear</a>
+      </form>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
