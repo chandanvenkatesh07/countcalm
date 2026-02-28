@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>X Timeline Stock Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold">X Timeline Stock Tracker</h1>
+        <p class="text-slate-400">Last scrape: {{ state.last_scrape_at or 'never' }} | Last watermark: {{ state.last_tweet_id or 'none' }}</p>
+      </div>
+      <div class="flex gap-2">
+        <form action="/api/scrape/trigger" method="post">
+          <input type="hidden" name="max_tweets" value="120" />
+          <button class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500">Run Scrape Now</button>
+        </form>
+        <form action="/api/prices/refresh" method="post">
+          <button class="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-600">Refresh Prices</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <section>
+        <h2 class="text-xl font-semibold mb-3">Running Tracker</h2>
+        <div class="space-y-4">
+          {% for r in running %}
+          <div class="rounded-xl border border-slate-800 p-4 bg-slate-900/60">
+            <div class="flex justify-between items-center mb-2">
+              <div>
+                <p class="text-lg font-bold">${{ r.ticker }} — {{ r.company_name }}</p>
+                <p class="text-xs text-slate-400">{{ r.sector }} • {{ r.asset_class }} • {{ r.mention_count }} mentions • {{ r.sentiment_score }}% bullish</p>
+              </div>
+              <span class="text-sm px-2 py-1 rounded bg-slate-800">{{ r.status }}</span>
+            </div>
+            <div class="text-sm text-slate-300 mb-3">Price: ${{ '%.2f'|format(r.current_price) }} | Since first seen: <span class="{{ 'text-emerald-400' if r.price_change_pct >=0 else 'text-rose-400' }}">{{ r.price_change_pct }}%</span></div>
+            <div class="flex gap-2">
+              {% if r.status != 'PROMOTED' %}
+              <form action="/api/running/{{r.id}}/promote" method="post">
+                <button class="px-3 py-1 rounded bg-orange-600 hover:bg-orange-500">Promote</button>
+              </form>
+              {% endif %}
+              {% if r.status != 'DISMISSED' %}
+              <form action="/api/running/{{r.id}}/dismiss" method="post">
+                <button class="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Dismiss</button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+          {% else %}
+          <div class="text-slate-400">No running entries yet. Hit “Run Scrape Now”.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-xl font-semibold mb-3">Primary Tracker</h2>
+        <div class="space-y-4">
+          {% for p in primary %}
+          <div class="rounded-xl border border-slate-800 p-4 bg-slate-900/60">
+            <div class="flex justify-between items-center mb-2">
+              <div>
+                <p class="text-lg font-bold">${{ p.ticker }} — {{ p.company_name }}</p>
+                <p class="text-xs text-slate-400">{{ p.sector }} • {{ p.asset_class }} • Conviction: {{ p.conviction }}</p>
+              </div>
+              <span class="text-sm px-2 py-1 rounded bg-indigo-800">{{ p.status }}</span>
+            </div>
+            <div class="text-sm text-slate-300 mb-2">Entry: ${{ '%.2f'|format(p.entry_price) }} → Now: ${{ '%.2f'|format(p.current_price) }} | <span class="{{ 'text-emerald-400' if p.price_change_pct >=0 else 'text-rose-400' }}">{{ p.price_change_pct }}%</span></div>
+            <div class="text-sm text-slate-300 mb-3">Thesis Score: {{ p.thesis_strength_score if p.has_analysis else '—' }}</div>
+            <form action="/api/primary/{{p.id}}/analyze" method="post">
+              <button class="px-3 py-1 rounded bg-fuchsia-700 hover:bg-fuchsia-600">Deep Analysis</button>
+            </form>
+          </div>
+          {% else %}
+          <div class="text-slate-400">No primary entries yet. Promote from Running Tracker.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <p class="mt-8 text-xs text-slate-500">Tip: first scrape will open Chrome and may require manual X login once. Session is stored in ./browser_profile.</p>
+  </div>
+</body>
+</html>
