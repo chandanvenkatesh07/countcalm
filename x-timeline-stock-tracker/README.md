@@ -32,7 +32,7 @@ Open: http://127.0.0.1:8081
 
 ## First Scrape
 1. Click **Run Scrape Now**.
-2. Google Chrome opens with persistent profile in `./browser_profile`.
+2. Chrome opens with persistent profile in `./browser_profile`.
 3. If needed, log in to X manually once.
 4. Scraper switches to **Following** when available and scrolls timeline.
 5. It stores:
@@ -61,8 +61,3 @@ Open: http://127.0.0.1:8081
 - This is built to run fully local on your machine.
 - The first run is intentionally interactive (you login in browser yourself).
 - Watermark logic prevents re-processing old tweets when tweet id is encountered again.
-- If Chrome does not launch correctly, set explicit path:
-
-```bash
-export CHROME_PATH=/usr/bin/google-chrome
-```
