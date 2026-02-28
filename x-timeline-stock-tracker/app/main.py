@@ -220,11 +220,23 @@ async def run_playwright_scrape(max_tweets: int, watermark: Optional[str]) -> li
     seen_ids: set[str] = set()
 
     async with async_playwright() as p:
-        context = await p.chromium.launch_persistent_context(
+        browser_kwargs = dict(
             user_data_dir=str(PROFILE_DIR),
             headless=False,
             viewport={"width": 1440, "height": 1200},
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--start-maximized",
+            ],
         )
+        chrome_path = os.getenv("CHROME_PATH", "").strip()
+        if chrome_path:
+            browser_kwargs["executable_path"] = chrome_path
+        else:
+            # Prefer real Google Chrome for X login compatibility
+            browser_kwargs["channel"] = "chrome"
+
+        context = await p.chromium.launch_persistent_context(**browser_kwargs)
         page = context.pages[0] if context.pages else await context.new_page()
         await page.goto("https://x.com/home", wait_until="domcontentloaded")
 
